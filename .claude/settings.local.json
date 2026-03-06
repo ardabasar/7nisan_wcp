@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh repo view wcpllc/2026CompetitiveConcept)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(./gradlew build)",
+      "Bash(export JAVA_HOME=\"/Users/ardabasar/wpilib/2026/jdk\")",
+      "Bash(gh api repos/wcpllc/2026CompetitiveConcept/git/trees/main?recursive=1 -q '.tree[].path')",
+      "Bash(gh api repos/wcpllc/2026CompetitiveConcept/git/trees/main --recursive -q '.tree[].path')",
+      "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/subsystems/Limelight.java)",
+      "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/LimelightHelpers.java)",
+      "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/commands/AimAndDriveCommand.java)",
+      "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/Constants.java)",
+      "Bash(curl -s https://api.github.com/repos/wcpllc/2026CompetitiveConcept/contents/src/main/java/frc/robot -q '.[] | select\\(.type==\"\"file\"\"\\) | .name')",
+      "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/Robot.java)",
+      "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/RobotContainer.java)",
+      "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/commands/AutoRoutines.java)",
+      "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/commands/SubsystemCommands.java)",
+      "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/commands/PrepareShotCommand.java)",
+      "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/subsystems/Swerve.java)",
+      "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/Landmarks.java)"
+    ]
+  }
+}
