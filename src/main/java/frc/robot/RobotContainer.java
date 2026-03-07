@@ -165,6 +165,14 @@ public class RobotContainer {
         NamedCommands.registerCommand("alignToTag",
             new AlignToAprilTag(drivetrain, vision, MaxSpeed, MaxAngularRate).withTimeout(3.0));
 
+        // Climb yukari (mekanizmayi uzat) - 3 saniye
+        NamedCommands.registerCommand("climbUp",
+            new ClimbCommand(climb, ClimbCommand.Direction.UP).withTimeout(2.0));
+
+        // Climb asagi (robotu as) - 3 saniye
+        NamedCommands.registerCommand("climbDown",
+            new ClimbCommand(climb, ClimbCommand.Direction.DOWN).withTimeout(2.0));
+
         // Vision kontrol
         NamedCommands.registerCommand("visionOn", Commands.runOnce(() -> vision.setEnabled(true)));
         NamedCommands.registerCommand("visionOff", Commands.runOnce(() -> vision.setEnabled(false)));
@@ -239,7 +247,15 @@ public class RobotContainer {
         // RB -> Hub yonune donus hizalama (WCP aim mantigi, basili tut)
         // ==================================================================
         joystick.rightBumper().whileTrue(
-            new AlignToAprilTag(drivetrain, vision, MaxSpeed, MaxAngularRate));
+            new AlignToAprilTag(drivetrain, "limelight", MaxSpeed, MaxAngularRate,
+                () -> {
+                    double sign = driveXYInverted ? -1.0 : 1.0;
+                    return sign * shapeInput(-joystick.getLeftY()) * MaxSpeed;
+                },
+                () -> {
+                    double sign = driveXYInverted ? -1.0 : 1.0;
+                    return sign * shapeInput(-joystick.getLeftX()) * MaxSpeed;
+                }));
 
         // ==================================================================
         // A -> Intake ARM ac (basili tut = +0.25, birak = dur)

@@ -1,5 +1,7 @@
 package frc.robot.commands;
 
+import java.util.function.DoubleSupplier;
+
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
@@ -7,68 +9,82 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 
 import frc.robot.LimelightHelpers;
+import frc.robot.LimelightHelpers.RawFiducial;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.VisionSubsystem;
 
 /**
  * ============================================================================
- * HUB HIZALAMA - Limelight TX Tabanli Dogrudan Hizalama
+ * HUB HIZALAMA - EN YAKIN TAG'E DOGRUDAN HIZALAMA + SURUS
  * ============================================================================
  *
- * RB basili tut -> Robot Limelight'in gordugu AprilTag'e dogrudan hizalanir.
- * TX degeri = tag'in kamera merkezinden yatay kaymasi (derece).
- * TX = 0 → tag tam merkezde → robot hizali.
+ * RB basili tut -> Robot en yakin AprilTag'e hizalanir.
+ * Surucu ayni anda X/Y hareket yapabilir (joystick aktif kalir).
+ * Sadece ROTATION otomatik kontrol edilir.
  *
- * Bu yontem odometry'ye bagimli DEGILDIR:
- *   - Odometry bozuk olsa bile calisir
- *   - Dogrudan kamera verisini kullanir (gercek zamanli)
- *   - Tag gorunmedigi anda durur (sallanma olmaz)
+ * En yakin tag bulma:
+ *   - getRawFiducials() ile tum gorulen tagleri al
+ *   - distToCamera en kucuk olani sec
+ *   - Onun txnc degerini derece'ye cevir ve P+D kontrol uygula
  *
- * Avantajlari:
- *   - Odometry hatasina duyarsiz
- *   - Anlik ve dogru hizalama
- *   - Basit ve guvenilir
+ * TX -> derece donusumu:
+ *   txnc * (FOV/2) = yaklasik derece
+ *   LL3: FOV ~63.3 -> txnc=1.0 -> ~31.6 derece
+ *
+ * Odometry'ye BAGIMLI DEGILDIR.
  * ============================================================================
  */
 public class AlignToAprilTag extends Command {
     private final CommandSwerveDrivetrain drivetrain;
     private final String limelightName;
     private final double maxAngularRate;
+    private final DoubleSupplier velocityXSupplier;
+    private final DoubleSupplier velocityYSupplier;
 
     // TX-tabanli P + D kontrol
-    // TX derece cinsinden, cikis rad/s cinsinden
     private static final double kP = 0.06;
     private static final double kD = 0.004;
-    private static final double TOLERANCE_DEG = 2.0;
+    private static final double TOLERANCE_DEG = 1.0;
+
+    // Limelight yatay FOV / 2 (derece) - txnc -> derece donusumu icin
+    // LL2: ~29.8, LL3: ~31.65
+    private static final double LL_HORIZ_HALF_FOV_DEG = 31.65;
 
     private double lastTx = 0;
 
-    // FieldCentric request - sadece rotation kullanacagiz
     private final SwerveRequest.FieldCentric fieldCentric = new SwerveRequest.FieldCentric()
         .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
     /**
-     * Constructor (VisionSubsystem ile - RobotContainer uyumlulugu)
+     * Constructor - Teleop icin (surucu X/Y kontrolu + otomatik rotation)
+     *
+     * @param velocityX surucu ileri/geri hiz (m/s)
+     * @param velocityY surucu sag/sol hiz (m/s)
+     */
+    public AlignToAprilTag(CommandSwerveDrivetrain drivetrain,
+                           String limelightName,
+                           double maxSpeed,
+                           double maxAngularRate,
+                           DoubleSupplier velocityX,
+                           DoubleSupplier velocityY) {
+        this.drivetrain = drivetrain;
+        this.limelightName = limelightName;
+        this.maxAngularRate = maxAngularRate;
+        this.velocityXSupplier = velocityX;
+        this.velocityYSupplier = velocityY;
+
+        addRequirements(drivetrain);
+    }
+
+    /**
+     * Constructor - Otonom icin (surus yok, sadece rotation)
+     * VisionSubsystem parametresi geriye uyumluluk icin kalir.
      */
     public AlignToAprilTag(CommandSwerveDrivetrain drivetrain,
                            VisionSubsystem vision,
                            double maxSpeed,
                            double maxAngularRate) {
-        this(drivetrain, "limelight", maxSpeed, maxAngularRate);
-    }
-
-    /**
-     * Constructor (limelight ismi ile)
-     */
-    public AlignToAprilTag(CommandSwerveDrivetrain drivetrain,
-                           String limelightName,
-                           double maxSpeed,
-                           double maxAngularRate) {
-        this.drivetrain = drivetrain;
-        this.limelightName = limelightName;
-        this.maxAngularRate = maxAngularRate;
-
-        addRequirements(drivetrain);
+        this(drivetrain, "limelight", maxSpeed, maxAngularRate, () -> 0, () -> 0);
     }
 
     @Override
@@ -79,13 +95,45 @@ public class AlignToAprilTag extends Command {
 
     @Override
     public void execute() {
-        boolean hasTarget = LimelightHelpers.getTV(limelightName);
+        // En yakin tag'i bul (rawFiducials ile)
+        double tx = 0;
+        boolean hasTarget = false;
+
+        try {
+            RawFiducial[] fiducials = LimelightHelpers.getRawFiducials(limelightName);
+            if (fiducials != null && fiducials.length > 0) {
+                // distToCamera en kucuk olan = en yakin tag
+                RawFiducial nearest = fiducials[0];
+                for (int i = 1; i < fiducials.length; i++) {
+                    if (fiducials[i].distToCamera < nearest.distToCamera) {
+                        nearest = fiducials[i];
+                    }
+                }
+                // txnc -> derece donusumu
+                tx = nearest.txnc * LL_HORIZ_HALF_FOV_DEG;
+                hasTarget = true;
+
+                SmartDashboard.putNumber("Align/NearestTagID", nearest.id);
+                SmartDashboard.putNumber("Align/NearestDist",
+                    Math.round(nearest.distToCamera * 100.0) / 100.0);
+            }
+        } catch (Exception e) {
+            // rawFiducials alinamazsa fallback: standart getTX
+            hasTarget = LimelightHelpers.getTV(limelightName);
+            if (hasTarget) {
+                tx = LimelightHelpers.getTX(limelightName);
+            }
+        }
+
+        // Surucu X/Y girdisi (joystick'ten)
+        double vx = velocityXSupplier.getAsDouble();
+        double vy = velocityYSupplier.getAsDouble();
 
         if (!hasTarget) {
-            // Tag gorunmuyor - dur, sallanma
+            // Tag yok - surucu kontrolu gec, otomatik rotation yok
             drivetrain.setControl(fieldCentric
-                .withVelocityX(0)
-                .withVelocityY(0)
+                .withVelocityX(vx)
+                .withVelocityY(vy)
                 .withRotationalRate(0));
             SmartDashboard.putString("Align/Status", "NO TARGET");
             SmartDashboard.putBoolean("Align/Aimed", false);
@@ -93,26 +141,22 @@ public class AlignToAprilTag extends Command {
             return;
         }
 
-        // TX: tag'in kamera merkezinden yatay sapma (derece)
-        // TX > 0 → tag saga kayik → saga donmemiz lazim (negatif rotasyon)
-        double tx = LimelightHelpers.getTX(limelightName);
-
         // P + D kontrol
         double derivative = tx - lastTx;
         double rotationRate = -(kP * tx + kD * derivative);
         lastTx = tx;
 
-        // Hiz siniri (%60 max hiz - hassas hizalama icin)
+        // Hiz siniri (%60 max hiz)
         double maxRot = maxAngularRate * 0.6;
         rotationRate = Math.max(-maxRot, Math.min(maxRot, rotationRate));
 
         // Tolerans icindeyse kilitlen
         boolean aimed = Math.abs(tx) < TOLERANCE_DEG;
 
-        // Uygula
+        // Uygula: surucu X/Y + otomatik rotation
         drivetrain.setControl(fieldCentric
-            .withVelocityX(0)
-            .withVelocityY(0)
+            .withVelocityX(vx)
+            .withVelocityY(vy)
             .withRotationalRate(aimed ? 0 : rotationRate));
 
         // Dashboard

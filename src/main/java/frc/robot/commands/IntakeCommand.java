@@ -46,7 +46,7 @@ public class IntakeCommand extends Command {
 
         // Dashboard
         if (loopCount % DASHBOARD_INTERVAL == 0) {
-            SmartDashboard.putNumber("Intake/ArmPos", Math.round(arm.getPosition() * 100.0) / 100.0);
+            SmartDashboard.putBoolean("Intake/ArmActive", arm.isActive());
             SmartDashboard.putBoolean("Intake/RollerActive", roller.isActive());
         }
     }

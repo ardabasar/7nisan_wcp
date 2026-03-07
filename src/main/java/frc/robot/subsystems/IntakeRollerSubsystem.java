@@ -85,7 +85,9 @@ public class IntakeRollerSubsystem extends SubsystemBase {
         TalonFXConfiguration config = new TalonFXConfiguration();
         config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         config.CurrentLimits.StatorCurrentLimitEnable = true;
-        config.CurrentLimits.StatorCurrentLimit = STATOR_CURRENT_LIMIT;
+        config.CurrentLimits.StatorCurrentLimit = 30.0;
+        config.CurrentLimits.SupplyCurrentLimitEnable = true;
+        config.CurrentLimits.SupplyCurrentLimit = 20.0;
         motor.getConfigurator().apply(config);
     }
 

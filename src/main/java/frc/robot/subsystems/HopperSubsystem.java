@@ -39,7 +39,7 @@ public class HopperSubsystem extends SubsystemBase {
     // SABITLER
     // ========================================================================
     /** Hopper calisme hizi (-1 yone dogru, bu yuzden negatif) */
-    public static final double HOPPER_SPEED = -1;
+    public static final double HOPPER_SPEED = -0.25;
 
     /** Stator akim limiti */
     private static final double STATOR_CURRENT_LIMIT = 40.0;
@@ -84,7 +84,9 @@ public class HopperSubsystem extends SubsystemBase {
         TalonFXConfiguration config = new TalonFXConfiguration();
         config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         config.CurrentLimits.StatorCurrentLimitEnable = true;
-        config.CurrentLimits.StatorCurrentLimit = STATOR_CURRENT_LIMIT;
+        config.CurrentLimits.StatorCurrentLimit = 30.0;
+        config.CurrentLimits.SupplyCurrentLimitEnable = true;
+        config.CurrentLimits.SupplyCurrentLimit = 20.0;
         motor.getConfigurator().apply(config);
     }
 

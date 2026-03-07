@@ -40,7 +40,7 @@ public class ClimbSubsystem extends SubsystemBase {
     // SABITLER
     // ========================================================================
     /** Climb hareket hizi */
-    public static final double CLIMB_SPEED = 0.25;
+    public static final double CLIMB_SPEED = 0.5;
 
     /** Stator akim limiti */
     private static final double STATOR_CURRENT_LIMIT = 50.0;
@@ -85,7 +85,9 @@ public class ClimbSubsystem extends SubsystemBase {
         TalonFXConfiguration config = new TalonFXConfiguration();
         config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         config.CurrentLimits.StatorCurrentLimitEnable = true;
-        config.CurrentLimits.StatorCurrentLimit = STATOR_CURRENT_LIMIT;
+        config.CurrentLimits.StatorCurrentLimit = 40.0;
+        config.CurrentLimits.SupplyCurrentLimitEnable = true;
+        config.CurrentLimits.SupplyCurrentLimit = 30.0;
         motor.getConfigurator().apply(config);
     }
 

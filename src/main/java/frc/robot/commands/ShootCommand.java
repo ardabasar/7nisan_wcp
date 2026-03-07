@@ -56,21 +56,21 @@ public class ShootCommand extends Command {
 
     static {
         /* BEYAZ TOP, SARIDA RPM ARTTIR */
-        distanceToShotMap.put(Inches.of(36.0), new Shot(3000, 0.12)); // Hub dibinden atis
-        distanceToShotMap.put(Inches.of(52.0), new Shot(3500, 0.19)); // En yakin
-        distanceToShotMap.put(Inches.of(72.0), new Shot(3688, 0.25)); // Yakin-orta
-        distanceToShotMap.put(Inches.of(92.0), new Shot(3875, 0.31)); // Orta-yakin
-        distanceToShotMap.put(Inches.of(114.4), new Shot(4094, 0.40)); // Orta (WCP referans)
-        distanceToShotMap.put(Inches.of(132.0), new Shot(4250, 0.43)); // Orta-uzak
-        distanceToShotMap.put(Inches.of(150.0), new Shot(4438, 0.46)); // Uzak
-        distanceToShotMap.put(Inches.of(165.5), new Shot(4563, 0.48)); // WCP uzak referans
+        distanceToShotMap.put(Inches.of(36.0), new Shot(2880, 0.12)); // Hub dibinden atis
+        distanceToShotMap.put(Inches.of(52.0), new Shot(3360, 0.19)); // En yakin
+        distanceToShotMap.put(Inches.of(72.0), new Shot(3540, 0.25)); // Yakin-orta
+        distanceToShotMap.put(Inches.of(92.0), new Shot(3720, 0.31)); // Orta-yakin
+        distanceToShotMap.put(Inches.of(114.4), new Shot(3930, 0.40)); // Orta (WCP referans)
+        distanceToShotMap.put(Inches.of(132.0), new Shot(4080, 0.43)); // Orta-uzak
+        distanceToShotMap.put(Inches.of(150.0), new Shot(4260, 0.46)); // Uzak
+        distanceToShotMap.put(Inches.of(165.5), new Shot(4380, 0.48)); // WCP uzak referans
 
-        // Uzun menzil (tower/human tarafi yakini)
-        distanceToShotMap.put(Inches.of(182.0), new Shot(4725, 0.51));
-        distanceToShotMap.put(Inches.of(200.0), new Shot(4888, 0.55));
-        distanceToShotMap.put(Inches.of(220.0), new Shot(5063, 0.59));
-        distanceToShotMap.put(Inches.of(235.0), new Shot(5188, 0.62));
-        distanceToShotMap.put(Inches.of(242.0), new Shot(5250, 0.64)); // Human side'e yakin ust limit
+        // Uzun menzil (tower/human tarafi yakini) - sahada tune edilecek
+        distanceToShotMap.put(Inches.of(182.0), new Shot(4536, 0.51));
+        distanceToShotMap.put(Inches.of(200.0), new Shot(4692, 0.55));
+        distanceToShotMap.put(Inches.of(220.0), new Shot(4860, 0.59));
+        distanceToShotMap.put(Inches.of(235.0), new Shot(4980, 0.62));
+        distanceToShotMap.put(Inches.of(242.0), new Shot(5040, 0.64)); // Human side'e yakin ust limit
     }
 
     // ========================================================================
