@@ -17,6 +17,7 @@ import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.subsystems.HoodSubsystem;
 import frc.robot.subsystems.FeederSubsystem;
 import frc.robot.subsystems.HopperSubsystem;
+import frc.robot.subsystems.IntakeArmSubsystem;
 import frc.robot.subsystems.VisionSubsystem;
 
 /**
@@ -27,9 +28,8 @@ import frc.robot.subsystems.VisionSubsystem;
  * 2) Mesafeye gore InterpolatingTreeMap ile RPM + Hood enterpolasyon
  * 3) Shooter hizlanir (VelocityVoltage PID)
  * 4) Shooter hedef RPM'e ulasinca Feeder (5000 RPM) + Hopper baslar
- * 5) Birakinca hepsi durur, hood default'a doner
- *
- * Intake arm'a DOKUNULMAZ.
+ * 5) Intake arm zamanlayici ile yukari/asagi sallanir (top agitasyonu)
+ * 6) Birakinca hepsi durur, hood default'a doner
  */
 public class ShootCommand extends Command {
     private static final double kShooterReadyToleranceRPM = 150.0;
@@ -41,6 +41,17 @@ public class ShootCommand extends Command {
     private static final double kHoodDeadband = 0.02;
     private static final Distance kMinShotDistance = Inches.of(36.0);
     private static final Distance kMaxShotDistance = Inches.of(242.0);
+
+    // ========================================================================
+    // INTAKE ARM AGITASYON - Zamanlayici tabanli (encoder YOK)
+    // ========================================================================
+    // Toplari shooter'a itmek icin kol yukari/asagi sallanir.
+    // Asagi hiz dusuk: yercekimi yardim eder, motor zorlanmaz.
+    private static final double ARM_UP_SPEED   =  0.25;   // yukari hiz
+    private static final double ARM_DOWN_SPEED = -0.25;    // asagi hiz (esit kalkip insin)
+    private static final double ARM_UP_SECONDS   = 0.65;   // yukari suresi
+    private static final double ARM_DOWN_SECONDS = 0.65;   // asagi suresi
+    private static final double ARM_CYCLE_SECONDS = ARM_UP_SECONDS + ARM_DOWN_SECONDS;
 
     // ========================================================================
     // WCP Shot tablosu - InterpolatingTreeMap birebir kopya
@@ -80,6 +91,7 @@ public class ShootCommand extends Command {
     private final HoodSubsystem hood;
     private final FeederSubsystem feeder;
     private final HopperSubsystem hopper;
+    private final IntakeArmSubsystem intakeArm; // null olabilir
     private final VisionSubsystem vision;
     private final String limelightName;
     private int readyCycles = 0;
@@ -87,18 +99,38 @@ public class ShootCommand extends Command {
     private double lastTargetRpm = 0.0;
     private double filteredDistanceMeters = kMinShotDistance.in(Meters);
     private double lastHoodCommand = -1.0;
+    private double feedStartTimestamp = 0.0;
+    private boolean feedingStarted = false;
 
+    /**
+     * Constructor - IntakeArm agitasyonlu (teleop + otonom)
+     */
     public ShootCommand(ShooterSubsystem shooter, HoodSubsystem hood,
             FeederSubsystem feeder, HopperSubsystem hopper,
-            VisionSubsystem vision, String limelightName) {
+            VisionSubsystem vision, String limelightName,
+            IntakeArmSubsystem intakeArm) {
         this.shooter = shooter;
         this.hood = hood;
         this.feeder = feeder;
         this.hopper = hopper;
         this.vision = vision;
         this.limelightName = limelightName;
+        this.intakeArm = intakeArm;
 
-        addRequirements(shooter, hood, feeder, hopper);
+        if (intakeArm != null) {
+            addRequirements(shooter, hood, feeder, hopper, intakeArm);
+        } else {
+            addRequirements(shooter, hood, feeder, hopper);
+        }
+    }
+
+    /**
+     * Constructor - IntakeArm'siz (geriye uyumluluk)
+     */
+    public ShootCommand(ShooterSubsystem shooter, HoodSubsystem hood,
+            FeederSubsystem feeder, HopperSubsystem hopper,
+            VisionSubsystem vision, String limelightName) {
+        this(shooter, hood, feeder, hopper, vision, limelightName, null);
     }
 
     @Override
@@ -109,8 +141,13 @@ public class ShootCommand extends Command {
         lastTargetRpm = 0.0;
         filteredDistanceMeters = kMinShotDistance.in(Meters);
         lastHoodCommand = -1.0;
+        feedStartTimestamp = 0.0;
+        feedingStarted = false;
         feeder.stop();
         hopper.stop();
+        if (intakeArm != null) {
+            intakeArm.stop();
+        }
     }
 
     @Override
@@ -158,9 +195,31 @@ public class ShootCommand extends Command {
         if (allowFeed) {
             feeder.feed();
             hopper.run();
+
+            // Feed baslangic zamanini kaydet (arm agitasyonu icin)
+            if (!feedingStarted) {
+                feedStartTimestamp = Timer.getFPGATimestamp();
+                feedingStarted = true;
+            }
         } else {
             feeder.stop();
             hopper.stop();
+        }
+
+        // 5) INTAKE ARM AGITASYONU (sadece besleme sirasinda)
+        if (intakeArm != null) {
+            if (feedingStarted) {
+                double feedElapsed = Timer.getFPGATimestamp() - feedStartTimestamp;
+                double phase = feedElapsed % ARM_CYCLE_SECONDS;
+
+                if (phase < ARM_UP_SECONDS) {
+                    intakeArm.setSpeed(ARM_UP_SPEED);   // 1s yukari
+                } else {
+                    intakeArm.setSpeed(ARM_DOWN_SPEED);  // 1s asagi (yumusak)
+                }
+            } else {
+                intakeArm.stop();
+            }
         }
 
         // Dashboard
@@ -184,6 +243,9 @@ public class ShootCommand extends Command {
         feeder.stop();
         hopper.stop();
         hood.setDefault();
+        if (intakeArm != null) {
+            intakeArm.stop();
+        }
         LimelightHelpers.setLEDMode_PipelineControl(limelightName);
 
         SmartDashboard.putBoolean("Shoot/ShooterReady", false);

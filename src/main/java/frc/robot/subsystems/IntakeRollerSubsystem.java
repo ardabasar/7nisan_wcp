@@ -40,7 +40,7 @@ public class IntakeRollerSubsystem extends SubsystemBase {
     // SABITLER
     // ========================================================================
     /** Roller calisme hizi */
-    public static final double ROLLER_SPEED = -0.5;
+    public static final double ROLLER_SPEED = -1;
 
     /** Stator akim limiti */
     private static final double STATOR_CURRENT_LIMIT = 40.0;

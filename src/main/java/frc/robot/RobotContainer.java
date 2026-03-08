@@ -148,9 +148,9 @@ public class RobotContainer {
     // NAMED COMMANDS (PathPlanner Otonom icin)
     // ========================================================================
     private void registerNamedCommands() {
-        // Atis: Shooter + Hood + Feeder + Hopper
+        // Atis: Shooter + Hood + Feeder + Hopper + IntakeArm agitasyon
         NamedCommands.registerCommand("shoot",
-            new ShootCommand(shooter, hood, feeder, hopper, vision, "limelight")
+            new ShootCommand(shooter, hood, feeder, hopper, vision, "limelight", intakeArm)
                 .withTimeout(3.0));
 
         // Intake: Arm + Roller
@@ -241,7 +241,7 @@ public class RobotContainer {
         //   Intake arm'a DOKUNULMAZ, neredeyse orada kalir
         // ==================================================================
         joystick.rightTrigger(0.5).whileTrue(
-            new ShootCommand(shooter, hood, feeder, hopper, vision, "limelight"));
+            new ShootCommand(shooter, hood, feeder, hopper, vision, "limelight", intakeArm));
 
         // ==================================================================
         // RB -> Hub yonune donus hizalama (WCP aim mantigi, basili tut)
@@ -318,14 +318,15 @@ public class RobotContainer {
                 hood));
 
         // ==================================================================
-        // Back -> Sadece surus X/Y yonunu tersle (rotation etkilenmez)
+        // Back -> HEADING RESET (Pigeon sifirla)
+        //   Robotun su an baktigi yon = driver'a gore "ileri" olur.
+        //   Field-centric suruste "ileri" her zaman driver'dan uzaga gider.
         // ==================================================================
         joystick.back().onTrue(Commands.runOnce(() -> {
-            driveXYInverted = !driveXYInverted;
+            drivetrain.seedFieldCentric();
             xInputLimiter.reset(0);
             yInputLimiter.reset(0);
-            SmartDashboard.putBoolean("Drive/XYInverted", driveXYInverted);
-            SmartDashboard.putString("Drive/Mode", driveXYInverted ? "XY Reversed" : "XY Normal");
+            SmartDashboard.putString("Drive/Status", "HEADING RESET!");
         }));
 
         // ==================================================================
