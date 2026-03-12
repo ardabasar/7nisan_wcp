@@ -1,10 +1,12 @@
 package frc.robot.commands;
 
+import java.util.Set;
 import java.util.function.DoubleSupplier;
 
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 
@@ -15,21 +17,23 @@ import frc.robot.subsystems.VisionSubsystem;
 
 /**
  * ============================================================================
- * HUB HIZALAMA - EN YAKIN TAG'E DOGRUDAN HIZALAMA + SURUS
+ * HUB HIZALAMA - ALLIANCE BAZLI FILTRELEME + HASSAS MERKEZ HIZALAMA
  * ============================================================================
  *
- * RB basili tut -> Robot en yakin AprilTag'e hizalanir.
+ * RB basili tut -> Robot izin verilen AprilTag'e hizalanir.
  * Surucu ayni anda X/Y hareket yapabilir (joystick aktif kalir).
  * Sadece ROTATION otomatik kontrol edilir.
  *
- * En yakin tag bulma:
- *   - getRawFiducials() ile tum gorulen tagleri al
- *   - distToCamera en kucuk olani sec
- *   - Onun txnc degerini derece'ye cevir ve P+D kontrol uygula
+ * ALLIANCE FILTRELEME:
+ *   - Blue Alliance: Sadece 24, 26, 27 numarali taglere hizalanir
+ *   - Red Alliance: Sadece 8, 10, 11 numarali taglere hizalanir
+ *   - Diger taglar IGNORED edilir
  *
- * TX -> derece donusumu:
- *   txnc * (FOV/2) = yaklasik derece
- *   LL3: FOV ~63.3 -> txnc=1.0 -> ~31.6 derece
+ * HIZALAMA MANTIGI:
+ *   - getRawFiducials() ile tum gorulen tagleri al
+ *   - Alliance'a gore filtrele
+ *   - distToCamera en kucuk olani sec
+ *   - txnc degerini kullanarak PID kontrol uygula (txnc = 0 hedef)
  *
  * Odometry'ye BAGIMLI DEGILDIR.
  * ============================================================================
@@ -41,16 +45,27 @@ public class AlignToAprilTag extends Command {
     private final DoubleSupplier velocityXSupplier;
     private final DoubleSupplier velocityYSupplier;
 
-    // TX-tabanli P + D kontrol
-    private static final double kP = 0.06;
-    private static final double kD = 0.004;
-    private static final double TOLERANCE_DEG = 1.0;
+    // ========================================================================
+    // ALLIANCE BAZLI TAG FILTRELEME
+    // ========================================================================
+    // Blue Alliance Hub tagleri (ic yuzler - robota bakan)
+    private static final Set<Integer> BLUE_ALLOWED_TAGS = Set.of(24, 26, 27);
+    // Red Alliance Hub tagleri (ic yuzler - robota bakan)
+    private static final Set<Integer> RED_ALLOWED_TAGS = Set.of(8, 10, 11);
 
-    // Limelight yatay FOV / 2 (derece) - txnc -> derece donusumu icin
-    // LL2: ~29.8, LL3: ~31.65
+    // ========================================================================
+    // PID KONTROL PARAMETRELERI - HASSAS MERKEZ HIZALAMA
+    // ========================================================================
+    // txnc degeri -1.0 ile +1.0 arasi normalize edilmis
+    // Hedef: txnc = 0 (tag tam merkezde)
+    private static final double kP = 4.5;    // Proportional gain (txnc * kP = rad/s)
+    private static final double kD = 0.15;   // Derivative gain (titresimi onle)
+    private static final double TOLERANCE = 0.02;  // txnc toleransi (0.02 = ~0.6 derece)
+
+    // Limelight yatay FOV / 2 (derece) - sadece dashboard icin
     private static final double LL_HORIZ_HALF_FOV_DEG = 31.65;
 
-    private double lastTx = 0;
+    private double lastTxnc = 0;
 
     private final SwerveRequest.FieldCentric fieldCentric = new SwerveRequest.FieldCentric()
         .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
@@ -87,42 +102,76 @@ public class AlignToAprilTag extends Command {
         this(drivetrain, "limelight", maxSpeed, maxAngularRate, () -> 0, () -> 0);
     }
 
+    /**
+     * Alliance'a gore izin verilen tag'leri dondurur
+     */
+    private Set<Integer> getAllowedTags() {
+        var alliance = DriverStation.getAlliance();
+        if (alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red) {
+            return RED_ALLOWED_TAGS;
+        }
+        return BLUE_ALLOWED_TAGS;
+    }
+
+    /**
+     * Tag ID'nin izin verilen listede olup olmadigini kontrol eder
+     */
+    private boolean isTagAllowed(int tagId) {
+        return getAllowedTags().contains(tagId);
+    }
+
     @Override
     public void initialize() {
-        lastTx = 0;
+        lastTxnc = 0;
         SmartDashboard.putString("Align/Status", "Starting...");
+        SmartDashboard.putString("Align/AllowedTags", getAllowedTags().toString());
     }
 
     @Override
     public void execute() {
-        // En yakin tag'i bul (rawFiducials ile)
-        double tx = 0;
+        // En yakin IZIN VERILEN tag'i bul (rawFiducials ile)
+        double txnc = 0;
         boolean hasTarget = false;
+        int targetTagId = -1;
 
         try {
             RawFiducial[] fiducials = LimelightHelpers.getRawFiducials(limelightName);
             if (fiducials != null && fiducials.length > 0) {
-                // distToCamera en kucuk olan = en yakin tag
-                RawFiducial nearest = fiducials[0];
-                for (int i = 1; i < fiducials.length; i++) {
-                    if (fiducials[i].distToCamera < nearest.distToCamera) {
-                        nearest = fiducials[i];
+                // Izin verilen taglerden en yakini bul
+                RawFiducial nearest = null;
+                double nearestDist = Double.MAX_VALUE;
+
+                for (RawFiducial fid : fiducials) {
+                    // Alliance filtreleme - sadece izin verilen taglar
+                    if (!isTagAllowed(fid.id)) {
+                        continue;
+                    }
+
+                    // En yakin olani sec
+                    if (fid.distToCamera < nearestDist) {
+                        nearestDist = fid.distToCamera;
+                        nearest = fid;
                     }
                 }
-                // txnc -> derece donusumu
-                tx = nearest.txnc * LL_HORIZ_HALF_FOV_DEG;
-                hasTarget = true;
 
-                SmartDashboard.putNumber("Align/NearestTagID", nearest.id);
-                SmartDashboard.putNumber("Align/NearestDist",
-                    Math.round(nearest.distToCamera * 100.0) / 100.0);
+                if (nearest != null) {
+                    // txnc dogrudan kullan (normalize -1 ile +1 arasi)
+                    // Hedef: txnc = 0 (tag tam merkezde)
+                    txnc = nearest.txnc;
+                    hasTarget = true;
+                    targetTagId = nearest.id;
+
+                    SmartDashboard.putNumber("Align/TargetTagID", nearest.id);
+                    SmartDashboard.putNumber("Align/TargetDist",
+                        Math.round(nearest.distToCamera * 100.0) / 100.0);
+                    SmartDashboard.putNumber("Align/txnc", txnc);
+                    // Derece cinsinden goster (dashboard icin)
+                    SmartDashboard.putNumber("Align/TX_deg", txnc * LL_HORIZ_HALF_FOV_DEG);
+                }
             }
         } catch (Exception e) {
-            // rawFiducials alinamazsa fallback: standart getTX
-            hasTarget = LimelightHelpers.getTV(limelightName);
-            if (hasTarget) {
-                tx = LimelightHelpers.getTX(limelightName);
-            }
+            // Hata durumunda hedef yok
+            hasTarget = false;
         }
 
         // Surucu X/Y girdisi (joystick'ten)
@@ -130,28 +179,30 @@ public class AlignToAprilTag extends Command {
         double vy = velocityYSupplier.getAsDouble();
 
         if (!hasTarget) {
-            // Tag yok - surucu kontrolu gec, otomatik rotation yok
+            // Izin verilen tag yok - surucu kontrolu gec, otomatik rotation yok
             drivetrain.setControl(fieldCentric
                 .withVelocityX(vx)
                 .withVelocityY(vy)
                 .withRotationalRate(0));
-            SmartDashboard.putString("Align/Status", "NO TARGET");
+            SmartDashboard.putString("Align/Status", "NO ALLOWED TAG");
             SmartDashboard.putBoolean("Align/Aimed", false);
-            lastTx = 0;
+            SmartDashboard.putNumber("Align/TargetTagID", -1);
+            lastTxnc = 0;
             return;
         }
 
-        // P + D kontrol
-        double derivative = tx - lastTx;
-        double rotationRate = -(kP * tx + kD * derivative);
-        lastTx = tx;
+        // PD kontrol (txnc direkt kullaniliyor, hedef = 0)
+        double error = txnc;  // Hedef 0, hata = txnc
+        double derivative = txnc - lastTxnc;
+        double rotationRate = -(kP * error + kD * derivative);
+        lastTxnc = txnc;
 
-        // Hiz siniri (%60 max hiz)
-        double maxRot = maxAngularRate * 0.6;
+        // Hiz siniri (%80 max hiz - daha agresif)
+        double maxRot = maxAngularRate * 0.8;
         rotationRate = Math.max(-maxRot, Math.min(maxRot, rotationRate));
 
         // Tolerans icindeyse kilitlen
-        boolean aimed = Math.abs(tx) < TOLERANCE_DEG;
+        boolean aimed = Math.abs(txnc) < TOLERANCE;
 
         // Uygula: surucu X/Y + otomatik rotation
         drivetrain.setControl(fieldCentric
@@ -160,11 +211,11 @@ public class AlignToAprilTag extends Command {
             .withRotationalRate(aimed ? 0 : rotationRate));
 
         // Dashboard
-        SmartDashboard.putNumber("Align/TX", tx);
         SmartDashboard.putNumber("Align/RotRate", rotationRate);
         SmartDashboard.putBoolean("Align/Aimed", aimed);
         SmartDashboard.putString("Align/Status",
-            aimed ? "LOCKED!" : String.format("TX: %.1f°", tx));
+            aimed ? "LOCKED on Tag " + targetTagId + "!"
+                  : String.format("Tag %d: txnc=%.3f", targetTagId, txnc));
     }
 
     @Override

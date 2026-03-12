@@ -83,6 +83,11 @@ public class FeederSubsystem extends SubsystemBase {
         setPercentOutput(0.0);
     }
 
+    /** Feeder'i ters calistirir (geriye dogru). */
+    public void reverse() {
+        motor.setControl(velocityRequest.withVelocity(RPM.of(-FEED_RPM)));
+    }
+
     public boolean isRunning() {
         return Math.abs(motor.getVelocity().getValue().in(RPM)) > 50;
     }

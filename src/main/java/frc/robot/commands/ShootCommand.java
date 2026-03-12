@@ -47,10 +47,10 @@ public class ShootCommand extends Command {
     // ========================================================================
     // Toplari shooter'a itmek icin kol yukari/asagi sallanir.
     // Asagi hiz dusuk: yercekimi yardim eder, motor zorlanmaz.
-    private static final double ARM_UP_SPEED   =  0.25;   // yukari hiz
-    private static final double ARM_DOWN_SPEED = -0.25;    // asagi hiz (esit kalkip insin)
-    private static final double ARM_UP_SECONDS   = 0.65;   // yukari suresi
-    private static final double ARM_DOWN_SECONDS = 0.65;   // asagi suresi
+    private static final double ARM_UP_SPEED   =  0.20;   // yukari hiz
+    private static final double ARM_DOWN_SPEED = -0.20;    // asagi hiz (esit kalkip insin)
+    private static final double ARM_UP_SECONDS   = 0.40;   // yukari suresi
+    private static final double ARM_DOWN_SECONDS = 0.40;   // asagi suresi
     private static final double ARM_CYCLE_SECONDS = ARM_UP_SECONDS + ARM_DOWN_SECONDS;
 
     // ========================================================================

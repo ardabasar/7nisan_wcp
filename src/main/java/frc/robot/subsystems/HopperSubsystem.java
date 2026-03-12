@@ -39,7 +39,7 @@ public class HopperSubsystem extends SubsystemBase {
     // SABITLER
     // ========================================================================
     /** Hopper calisme hizi (-1 yone dogru, bu yuzden negatif) */
-    public static final double HOPPER_SPEED = -0.25;
+    public static final double HOPPER_SPEED = -1;
 
     /** Stator akim limiti */
     private static final double STATOR_CURRENT_LIMIT = 40.0;

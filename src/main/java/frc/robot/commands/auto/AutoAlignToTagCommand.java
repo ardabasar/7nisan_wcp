@@ -1,34 +1,34 @@
 package frc.robot.commands.auto;
 
+import java.util.Set;
+
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 
 import frc.robot.LimelightHelpers;
+import frc.robot.LimelightHelpers.RawFiducial;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 
 /**
  * ============================================================================
- * AUTO ALIGN TO TAG COMMAND — Duzeltilmis
+ * AUTO ALIGN TO TAG COMMAND — ALLIANCE BAZLI FILTRELEME + HASSAS HIZALAMA
  * ============================================================================
- * Oturum basinda (initialize) her sey sifirlanir, ikinci enable'da guvenle
- * yeniden calisir.
  *
- * [FIX] "No robot code" / crash duzeltmeleri:
- *   1) SmartDashboard TAMAMEN THROTTLED — execute'da 0 string allocation
- *      Her loop'ta String.format + putString → GC pause → Watchdog timeout.
- *      Simdi sadece DASHBOARD_INTERVAL loop'ta bir yaziliyor (5Hz).
- *   2) String.format hot path'ten cikarildi — sabit string literalleri kullanildi
- *      isFinished()'de string allocation yok, execute hot path'te minimum.
- *   3) Mesafe hesabi duzeltildi:
- *      cameraPose[2] (sadece Z) → sqrt(x²+z²) (zemin mesafesi, kamera acisi toleranli)
- *   4) settleTimer initialize'da reset VE stop edilir, ikinci calismada temiz baslar
- *   5) Timer'lar end()'de durduruluyor (zaten vardi) + initialize'da tam sifir
+ * ALLIANCE FILTRELEME:
+ *   - Blue Alliance: Sadece 24, 26, 27 numarali taglere hizalanir
+ *   - Red Alliance: Sadece 8, 10, 11 numarali taglere hizalanir
+ *   - Diger taglar IGNORED edilir
+ *
+ * HIZALAMA MANTIGI:
+ *   - txnc degeri kullanilarak merkez hizalama (hedef = 0)
+ *   - Mesafe kontrolu ile istenilen uzakliga git
  *
  * OTONOM KULLANIM:
  *   Commands.sequence(pathCommand, new AutoAlignToTagCommand(...));
@@ -44,54 +44,57 @@ public class AutoAlignToTagCommand extends Command {
     private final double xScale;
     private final double rotScale;
 
-    // PID ayarlari
-    private static final double ROT_KP = 0.035;
+    // ========================================================================
+    // ALLIANCE BAZLI TAG FILTRELEME
+    // ========================================================================
+    private static final Set<Integer> BLUE_ALLOWED_TAGS = Set.of(24, 26, 27);
+    private static final Set<Integer> RED_ALLOWED_TAGS = Set.of(8, 10, 11);
+
+    // PID ayarlari - txnc tabanli (daha hassas)
+    private static final double ROT_KP = 4.0;   // txnc * kP = rad/s
     private static final double ROT_KI = 0.0;
-    private static final double ROT_KD = 0.003;
+    private static final double ROT_KD = 0.12;
 
     private static final double DIST_KP = 0.8;
     private static final double DIST_KI = 0.0;
     private static final double DIST_KD = 0.05;
 
-    // Toleranslar
-    private static final double ROT_TOLERANCE_DEG = 2.0;
-    private static final double DIST_TOLERANCE_M  = 0.08;
+    // Toleranslar - txnc tabanli
+    private static final double ROT_TOLERANCE = 0.02;   // txnc toleransi (~0.6 derece)
+    private static final double DIST_TOLERANCE_M = 0.08;
 
     // Deadband
-    private static final double ROT_DEADBAND_DEG = 0.8;
-    private static final double DIST_DEADBAND_M  = 0.05;
+    private static final double ROT_DEADBAND = 0.01;    // txnc deadband
+    private static final double DIST_DEADBAND_M = 0.05;
 
     // Minimum cikislar
-    private static final double MIN_ROT_OUTPUT  = 0.05;
+    private static final double MIN_ROT_OUTPUT = 0.05;
     private static final double MIN_DIST_OUTPUT = 0.06;
 
-    private static final double ROT_INVERT = 1.0;
-
     // Hiz limitleri
-    private static final double MAX_X_ACCEL   = 1.0;
+    private static final double MAX_X_ACCEL = 1.0;
     private static final double MAX_ROT_ACCEL = 3.0;
 
     // Otonom guvenlik
     private static final double TIMEOUT_SECONDS = 5.0;
-    private static final double SETTLE_SECONDS  = 0.3;
+    private static final double SETTLE_SECONDS = 0.3;
 
-    // [FIX] SmartDashboard throttle — her execute'da putString/putNumber crash yapar
-    // 50Hz x 10 = 5Hz guncelleme (Elastic icin yeterli)
+    // Dashboard throttle
     private static final int DASHBOARD_INTERVAL = 10;
     private int loopCount = 0;
 
     private final PIDController rotPid;
     private final PIDController distPid;
     private final SwerveRequest.RobotCentric robotCentric = new SwerveRequest.RobotCentric();
-    private final SlewRateLimiter xLimiter   = new SlewRateLimiter(MAX_X_ACCEL);
+    private final SlewRateLimiter xLimiter = new SlewRateLimiter(MAX_X_ACCEL);
     private final SlewRateLimiter rotLimiter = new SlewRateLimiter(MAX_ROT_ACCEL);
 
     private final Timer timeoutTimer = new Timer();
-    private final Timer settleTimer  = new Timer();
+    private final Timer settleTimer = new Timer();
     private boolean settling = false;
 
-    // Son bilinen mesafe (tag kaybolursa koru)
     private double lastKnownDistance;
+    private double lastTxnc = 0;
 
     public AutoAlignToTagCommand(
             CommandSwerveDrivetrain drivetrain,
@@ -102,24 +105,35 @@ public class AutoAlignToTagCommand extends Command {
             double xScale,
             double rotScale) {
 
-        this.drivetrain            = drivetrain;
-        this.limelightName         = limelightName;
-        this.maxSpeed              = maxSpeed;
-        this.maxAngularRate        = maxAngularRate;
+        this.drivetrain = drivetrain;
+        this.limelightName = limelightName;
+        this.maxSpeed = maxSpeed;
+        this.maxAngularRate = maxAngularRate;
         this.desiredDistanceMeters = MathUtil.clamp(desiredDistanceMeters, 0.3, 5.0);
-        this.xScale                = MathUtil.clamp(xScale,   0.0, 1.0);
-        this.rotScale              = MathUtil.clamp(rotScale, 0.0, 1.0);
+        this.xScale = MathUtil.clamp(xScale, 0.0, 1.0);
+        this.rotScale = MathUtil.clamp(rotScale, 0.0, 1.0);
 
         rotPid = new PIDController(ROT_KP, ROT_KI, ROT_KD);
-        rotPid.setSetpoint(0);
-        rotPid.setTolerance(ROT_TOLERANCE_DEG);
-        rotPid.enableContinuousInput(-180, 180);
+        rotPid.setSetpoint(0);  // Hedef: txnc = 0 (tag merkezde)
+        rotPid.setTolerance(ROT_TOLERANCE);
 
         distPid = new PIDController(DIST_KP, DIST_KI, DIST_KD);
         distPid.setSetpoint(this.desiredDistanceMeters);
         distPid.setTolerance(DIST_TOLERANCE_M);
 
         addRequirements(drivetrain);
+    }
+
+    private Set<Integer> getAllowedTags() {
+        var alliance = DriverStation.getAlliance();
+        if (alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red) {
+            return RED_ALLOWED_TAGS;
+        }
+        return BLUE_ALLOWED_TAGS;
+    }
+
+    private boolean isTagAllowed(int tagId) {
+        return getAllowedTags().contains(tagId);
     }
 
     @Override
@@ -131,24 +145,20 @@ public class AutoAlignToTagCommand extends Command {
         xLimiter.reset(0);
         rotLimiter.reset(0);
 
-        // [FIX] Her iki timer tam sifirlanir ve DURDURULUR
-        //       Onceki calismanin kalinti durumu temizlenir
-        //       Bu "no robot code" crash'in ana sebebiydi:
-        //       Timer state'i end()'den sonra bozuk kalabiliyordu
         timeoutTimer.stop();
         timeoutTimer.reset();
         timeoutTimer.start();
 
         settleTimer.stop();
         settleTimer.reset();
-        // settleTimer burada START edilmez — sadece bothLocked olunca baslar
 
-        settling         = false;
-        loopCount        = 0;
+        settling = false;
+        loopCount = 0;
         lastKnownDistance = desiredDistanceMeters;
+        lastTxnc = 0;
 
         SmartDashboard.putString("AutoAlign/Status", "Aligning...");
-        SmartDashboard.putNumber("AutoAlign/TargetDist", desiredDistanceMeters);
+        SmartDashboard.putString("AutoAlign/AllowedTags", getAllowedTags().toString());
     }
 
     @Override
@@ -156,7 +166,40 @@ public class AutoAlignToTagCommand extends Command {
         loopCount++;
         boolean shouldLog = (loopCount % DASHBOARD_INTERVAL == 0);
 
-        boolean hasTarget = LimelightHelpers.getTV(limelightName);
+        // En yakin IZIN VERILEN tag'i bul
+        double txnc = 0;
+        double measuredDistance = lastKnownDistance;
+        boolean hasTarget = false;
+        int targetTagId = -1;
+
+        try {
+            RawFiducial[] fiducials = LimelightHelpers.getRawFiducials(limelightName);
+            if (fiducials != null && fiducials.length > 0) {
+                RawFiducial nearest = null;
+                double nearestDist = Double.MAX_VALUE;
+
+                for (RawFiducial fid : fiducials) {
+                    if (!isTagAllowed(fid.id)) {
+                        continue;
+                    }
+                    if (fid.distToCamera < nearestDist) {
+                        nearestDist = fid.distToCamera;
+                        nearest = fid;
+                    }
+                }
+
+                if (nearest != null) {
+                    txnc = nearest.txnc;
+                    measuredDistance = nearest.distToCamera;
+                    measuredDistance = MathUtil.clamp(measuredDistance, 0.1, 6.0);
+                    lastKnownDistance = measuredDistance;
+                    hasTarget = true;
+                    targetTagId = nearest.id;
+                }
+            }
+        } catch (Exception e) {
+            hasTarget = false;
+        }
 
         // Tag yok — dur ve bekle
         if (!hasTarget) {
@@ -168,52 +211,24 @@ public class AutoAlignToTagCommand extends Command {
             settling = false;
             settleTimer.stop();
             settleTimer.reset();
-            if (shouldLog) SmartDashboard.putString("AutoAlign/Status", "No Tag");
+            lastTxnc = 0;
+            if (shouldLog) SmartDashboard.putString("AutoAlign/Status", "No Allowed Tag");
             return;
         }
 
-        double tx = LimelightHelpers.getTX(limelightName);
-
         // ====================================================================
-        // MESAFE OLCUMU
-        // [FIX] cameraPose[2] (sadece Z ekseni) yerine sqrt(x^2 + z^2) kullanilir.
-        //
-        // Neden? Kamera robota egimli monte edilirse (tipik FRC kurulumu):
-        //   - cameraPose[2] = Z ekseni, tag'e kamera optical axis mesafesi
-        //   - cameraPose[0] = X ekseni, yatay kayma
-        //   - Y'yi (dikey) yoksayarak zemin projeksiyonu alinir
-        //   - Bu robot-tag arasindaki GERCEK yatay mesafeye yakin deger verir
-        //
-        // Ornek: 1.5m mesafede kamera 10° egik → cameraPose[2]=1.477m ama
-        //        gercek yatay = sqrt(1.477² + 0.26²) ≈ 1.50m (duzeltilmis)
-        // ====================================================================
-        double measuredDistance;
-        double[] cameraPose = LimelightHelpers.getTargetPose_CameraSpace(limelightName);
-        if (cameraPose != null && cameraPose.length >= 3 && cameraPose[2] > 0.05) {
-            // XZ duzleminde Oklid mesafesi (zemin projeksiyonu)
-            double cx = cameraPose[0];
-            double cz = cameraPose[2];
-            measuredDistance = Math.sqrt(cx * cx + cz * cz);
-            measuredDistance = MathUtil.clamp(measuredDistance, 0.1, 6.0);
-            lastKnownDistance = measuredDistance;
-        } else {
-            // Yedek: ta'dan tahmin
-            double ta = LimelightHelpers.getTA(limelightName);
-            measuredDistance = estimateDistanceFromArea(ta);
-        }
-
-        // ====================================================================
-        // DONUS KONTROLU
+        // DONUS KONTROLU (txnc tabanli)
         // ====================================================================
         double rotCmd = 0;
-        if (Math.abs(tx) > ROT_DEADBAND_DEG) {
-            double rotPidOutput = rotPid.calculate(tx);
-            rotCmd = rotPidOutput * maxAngularRate * rotScale * ROT_INVERT;
+        if (Math.abs(txnc) > ROT_DEADBAND) {
+            double derivative = txnc - lastTxnc;
+            rotCmd = -(ROT_KP * txnc + ROT_KD * derivative);
             if (Math.abs(rotCmd) < MIN_ROT_OUTPUT) {
                 rotCmd = Math.copySign(MIN_ROT_OUTPUT, rotCmd);
             }
             rotCmd = MathUtil.clamp(rotCmd, -maxAngularRate * rotScale, maxAngularRate * rotScale);
         }
+        lastTxnc = txnc;
         rotCmd = rotLimiter.calculate(rotCmd);
 
         // ====================================================================
@@ -232,9 +247,9 @@ public class AutoAlignToTagCommand extends Command {
         xCmd = xLimiter.calculate(xCmd);
 
         // ====================================================================
-        // KILIT KONTROLU (settle timer)
+        // KILIT KONTROLU
         // ====================================================================
-        boolean rotLocked  = Math.abs(tx)        < ROT_TOLERANCE_DEG;
+        boolean rotLocked = Math.abs(txnc) < ROT_TOLERANCE;
         boolean distLocked = Math.abs(distError) < DIST_TOLERANCE_M;
         boolean bothLocked = rotLocked && distLocked;
 
@@ -250,26 +265,23 @@ public class AutoAlignToTagCommand extends Command {
             settleTimer.reset();
         }
 
-        // [FIX] SmartDashboard throttle — sadece 5Hz
-        //       Onceki kod her loop'ta putString + String.format yapiyordu
-        //       Bu GC pressure → Watchdog timeout → "No robot code"
         if (shouldLog) {
             SmartDashboard.putBoolean("AutoAlign/HasTarget", true);
-            SmartDashboard.putNumber("AutoAlign/TX",          tx);
+            SmartDashboard.putNumber("AutoAlign/TargetTagID", targetTagId);
+            SmartDashboard.putNumber("AutoAlign/txnc", txnc);
             SmartDashboard.putNumber("AutoAlign/MeasuredDist", measuredDistance);
-            SmartDashboard.putNumber("AutoAlign/DistError",   distError);
-            SmartDashboard.putNumber("AutoAlign/RotCmd",      rotCmd);
-            SmartDashboard.putNumber("AutoAlign/XCmd",        xCmd);
-            SmartDashboard.putNumber("AutoAlign/Elapsed",     timeoutTimer.get());
+            SmartDashboard.putNumber("AutoAlign/DistError", distError);
+            SmartDashboard.putNumber("AutoAlign/RotCmd", rotCmd);
+            SmartDashboard.putNumber("AutoAlign/XCmd", xCmd);
 
             if (bothLocked) {
-                SmartDashboard.putString("AutoAlign/Status", "Settling");
+                SmartDashboard.putString("AutoAlign/Status", "Settling Tag " + targetTagId);
             } else if (rotLocked) {
-                SmartDashboard.putString("AutoAlign/Status", "Dist Only");
+                SmartDashboard.putString("AutoAlign/Status", "Dist Only Tag " + targetTagId);
             } else if (distLocked) {
-                SmartDashboard.putString("AutoAlign/Status", "Rot Only");
+                SmartDashboard.putString("AutoAlign/Status", "Rot Only Tag " + targetTagId);
             } else {
-                SmartDashboard.putString("AutoAlign/Status", "Aligning");
+                SmartDashboard.putString("AutoAlign/Status", "Aligning Tag " + targetTagId);
             }
         }
 
@@ -283,7 +295,6 @@ public class AutoAlignToTagCommand extends Command {
 
     @Override
     public boolean isFinished() {
-        // [FIX] isFinished'de SmartDashboard yazimi YOK — her loop calisir, string allocation olmaz
         if (timeoutTimer.hasElapsed(TIMEOUT_SECONDS)) {
             return true;
         }
@@ -307,14 +318,5 @@ public class AutoAlignToTagCommand extends Command {
         SmartDashboard.putString("AutoAlign/Status",
             interrupted ? "Interrupted" : "Done");
         SmartDashboard.putBoolean("AutoAlign/HasTarget", false);
-    }
-
-    /**
-     * Tag alanindan (ta) mesafeyi tahmin eder — yedek yontem.
-     * Kalibrasyona gore ayarlanabilir.
-     */
-    private double estimateDistanceFromArea(double ta) {
-        if (ta < 0.1) return lastKnownDistance; // son bilinen mesafeyi koru
-        return MathUtil.clamp(25.0 / Math.sqrt(ta), 0.3, 5.0);
     }
 }

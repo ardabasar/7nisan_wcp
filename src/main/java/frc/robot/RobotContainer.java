@@ -188,31 +188,34 @@ public class RobotContainer {
      *    Sag Stick X     -> Donus (rotation)
      *
      *  FACE BUTONLARI:
-     *    A (alt)         -> Intake ARM ac (basili tut = +0.25)
-     *    B (sag)         -> Intake ROLLER calistir (basili tut = top al)
-     *    X (sol)         -> Hopper calistir (kayislari besle)
-     *    Y (ust)         -> Hopper ters (geriye al)
+     *    A (alt)         -> Hopper Manuel Ileri
+     *    B (sag)         -> Intake Arm Manuel asagi indir (Yedek)
+     *    X (sol)         -> Pas (shooter max hizla calissin)
+     *    Y (ust)         -> Hopper Manuel Geri (Sikisma)
      *
      *  BUMPER / TRIGGER:
-     *    RB              -> Hub yonune donus hizalama (basili tut, WCP aim mantigi)
+     *    RB              -> Hub yonune donus hizalama (basili tut, Auto-Aim)
      *    RT              -> ATIS! (Shooter+Feeder+Hood+Hopper)
-     *    LB              -> Intake ARM kapat (basili tut = -0.25)
-     *    LT              -> Climb asagi cek / asil
+     *    LB              -> Turbo (basili tut = max hiz, basilmiyorken %60)
+     *    LT              -> FULL INTAKE (Kol asagi indir + Roller calistir)
+     *
+     *  D-PAD (POV):
+     *    Up              -> Climb Yukari (Uzat)
+     *    Down            -> Climb Asagi (Cek/Asil)
+     *    Right           -> Intake yukari kaldirma
+     *    Left            -> Feeder ve shooter geri hareket etsin
      *
      *  MENU:
      *    Back            -> Field-centric sifirla (heading reset)
-     *    Start           -> (bos)
-     *
-     *  OTOMATIK:
-     *    Vision          -> HER ZAMAN ACIK
-     *    Intake Arm      -> Otonomda tamamen acik, otonom bitince kapatilir
+     *    Start           -> Servo Test
      *
      * ========================================================================
      */
     private void configureBindings() {
 
         // ==================================================================
-        // SWERVE SURME (varsayilan komut - sadece stickler)
+        // SWERVE SURME (varsayilan komut - LB turbo mantigi ile)
+        // LB basili: max hiz, LB basilmiyorken: %60 hiz
         // ==================================================================
         drivetrain.setDefaultCommand(
             drivetrain.applyRequest(() -> {
@@ -225,9 +228,12 @@ public class RobotContainer {
                 final double smoothedLeft = yInputLimiter.calculate(shapedLeft);
                 final double smoothedRotation = rotInputLimiter.calculate(shapedRotation);
 
+                // LB basili mi? Turbo mod (max hiz) : Normal mod (%60 hiz)
+                final double speedMultiplier = joystick.getHID().getLeftBumperButton() ? 1.0 : 0.3;
+
                 return drive
-                    .withVelocityX(smoothedForward * MaxSpeed)
-                    .withVelocityY(smoothedLeft * MaxSpeed)
+                    .withVelocityX(smoothedForward * MaxSpeed * speedMultiplier)
+                    .withVelocityY(smoothedLeft * MaxSpeed * speedMultiplier)
                     .withRotationalRate(smoothedRotation * MaxAngularRate);
             }));
 
@@ -258,55 +264,87 @@ public class RobotContainer {
                 }));
 
         // ==================================================================
-        // A -> Intake ARM ac (basili tut = +0.25, birak = dur)
+        // A -> Hopper Manuel Ileri (basili tut = calistir)
         // ==================================================================
         joystick.a().whileTrue(
+            Commands.startEnd(() -> hopper.run(), () -> hopper.stop(), hopper));
+
+        // ==================================================================
+        // B -> Intake Arm Manuel asagi indir (Yedek, basili tut = -0.25)
+        // ==================================================================
+        joystick.b().whileTrue(
+            Commands.startEnd(
+                () -> intakeArm.setSpeed(-IntakeArmSubsystem.ARM_SPEED),
+                () -> intakeArm.stop(),
+                intakeArm));
+
+        // ==================================================================
+        // LB -> TURBO: Surma hizi kontrolu swerve default command icinde
+        //       (basilmiyorken %60, basili tutuluyorken %100)
+        //       Burada ekstra binding yok, default command icinde halledildi
+        // ==================================================================
+
+        // ==================================================================
+        // POV UP -> Climb Yukari (Uzat)
+        // ==================================================================
+        joystick.povUp().whileTrue(
+            new ClimbCommand(climb, ClimbCommand.Direction.UP));
+
+        // ==================================================================
+        // POV DOWN -> Climb Asagi (Cek/Asil)
+        // ==================================================================
+        joystick.povDown().whileTrue(
+            new ClimbCommand(climb, ClimbCommand.Direction.DOWN));
+
+        // ==================================================================
+        // POV RIGHT -> Intake yukari kaldirma (basili tut = +0.25)
+        // ==================================================================
+        joystick.povRight().whileTrue(
             Commands.startEnd(
                 () -> intakeArm.setSpeed(IntakeArmSubsystem.ARM_SPEED),
                 () -> intakeArm.stop(),
                 intakeArm));
 
         // ==================================================================
-        // B -> Intake ROLLER calistir (basili tut = top al)
+        // POV LEFT -> Feeder, Shooter ve IntakeRoller geri hareket etsin
         // ==================================================================
-        joystick.b().whileTrue(
+        joystick.povLeft().whileTrue(
             Commands.startEnd(
-                () -> intakeRoller.run(),
-                () -> intakeRoller.stop(),
-                intakeRoller));
+                () -> {
+                    shooter.setRPM(-1500);  // Shooter geri (negatif RPM)
+                    feeder.reverse();        // Feeder geri
+                    intakeRoller.reverse();  // IntakeRoller geri
+                },
+                () -> {
+                    shooter.stop();
+                    feeder.stop();
+                    intakeRoller.stop();
+                },
+                shooter, feeder, intakeRoller));
 
         // ==================================================================
-        // LB -> Intake ARM kapat (basili tut = -0.25, birak = dur)
-        // ==================================================================
-        joystick.leftBumper().whileTrue(
-            Commands.startEnd(
-                () -> intakeArm.setSpeed(-IntakeArmSubsystem.ARM_SPEED),  // -0.25
-                () -> intakeArm.stop(),
-                intakeArm));
-
-        // ==================================================================
-        // POV UP -> Climb kaldir / yukari cek (basili tut = +0.25)
-        // ==================================================================
-        joystick.povUp().whileTrue(
-            new ClimbCommand(climb, ClimbCommand.Direction.UP));
-
-        // ==================================================================
-        // X -> Hopper calistir (kayislari besle)
+        // X -> Pas: Shooter max hizla calissin (basili tut)
         // ==================================================================
         joystick.x().whileTrue(
-            Commands.startEnd(() -> hopper.run(), () -> hopper.stop(), hopper));
+            Commands.startEnd(
+                () -> shooter.setRPM(5040),  // Max shooter RPM
+                () -> shooter.stop(),
+                shooter));
 
         // ==================================================================
-        // Y -> Hopper ters (geriye al - top sikismasi vs.)
+        // Y -> Hopper Manuel Geri (Sikisma durumunda)
         // ==================================================================
         joystick.y().whileTrue(
             Commands.startEnd(() -> hopper.reverse(), () -> hopper.stop(), hopper));
 
         // ==================================================================
-        // LT -> Climb asagi cek / asil (robotu yukari ceker)
+        // LT -> INTAKE: Sadece Roller calistir (Arm sabit kalir)
         // ==================================================================
         joystick.leftTrigger(0.5).whileTrue(
-            new ClimbCommand(climb, ClimbCommand.Direction.DOWN));
+            Commands.startEnd(
+                () -> intakeRoller.run(),
+                () -> intakeRoller.stop(),
+                intakeRoller));
 
         // ==================================================================
         // Start -> SERVO TEST (basili tut = MAX, birak = DEFAULT)

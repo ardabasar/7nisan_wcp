@@ -40,7 +40,7 @@ public class ClimbSubsystem extends SubsystemBase {
     // SABITLER
     // ========================================================================
     /** Climb hareket hizi */
-    public static final double CLIMB_SPEED = 0.5;
+    public static final double CLIMB_SPEED = -0.5;
 
     /** Stator akim limiti */
     private static final double STATOR_CURRENT_LIMIT = 50.0;

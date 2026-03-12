@@ -77,7 +77,7 @@ public class ShooterSubsystem extends SubsystemBase {
             )
             .withVoltage(
                 new VoltageConfigs()
-                    .withPeakReverseVoltage(Volts.of(0))
+                    .withPeakReverseVoltage(Volts.of(-12))  // Reverse icin izin ver
             )
             .withCurrentLimits(
                 new CurrentLimitsConfigs()
