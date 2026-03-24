@@ -42,16 +42,19 @@ public class AlignToHubOdometry extends Command {
     private final DoubleSupplier velocityYSupplier;
 
     // ========================================================================
-    // PID KONTROL PARAMETRELERI (614 referansli, 9545'e uyarlanmis)
+    // PD KONTROL PARAMETRELERI (614 referansli, 9545'e uyarlanmis)
     // ========================================================================
-    private static final double ROTATION_KP = 6.0;
-    private static final double MAX_ANGULAR_SPEED_RAD_PER_SEC = 7.0;
-    private static final double MIN_ANGULAR_SPEED_RAD_PER_SEC = 0.5;
-    private static final double ANGLE_TOLERANCE_DEGREES = 0.5;        // 0.5 derece: neredeyse 0 tolerans
-    // 0.5 derece altinda bile duzeltme yapar ama omega kucuk olur (KP * kucuk hata)
+    private static final double ROTATION_KP = 4.5;                     // P: ana duzeltme gucu
+    private static final double ROTATION_KD = 0.15;                    // D: titresimi onler (damping)
+    private static final double MAX_ANGULAR_SPEED_RAD_PER_SEC = 6.0;
+    private static final double MIN_ANGULAR_SPEED_RAD_PER_SEC = 0.3;
+    private static final double ANGLE_TOLERANCE_DEGREES = 0.8;         // 0.8° altinda → dur, titreme
+    private static final double ANGLE_DEADBAND_DEGREES = 0.3;          // 0.3° altinda → omega=0
 
     // Strafing compensation - surus sirasinda hedefe kilitli kalmayi saglar
     private static final double STRAFE_COMPENSATION_FACTOR = 0.75;
+
+    private double lastHeadingError = 0.0;
 
     private final SwerveRequest.FieldCentric fieldCentric = new SwerveRequest.FieldCentric()
         .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
@@ -59,10 +62,14 @@ public class AlignToHubOdometry extends Command {
     /**
      * Teleop constructor - surucu X/Y kontrolu + otomatik hub hizalama
      */
+    private final VisionSubsystem vision;
+
     public AlignToHubOdometry(CommandSwerveDrivetrain drivetrain,
+                               VisionSubsystem vision,
                                DoubleSupplier velocityX,
                                DoubleSupplier velocityY) {
         this.drivetrain = drivetrain;
+        this.vision = vision;
         this.velocityXSupplier = velocityX;
         this.velocityYSupplier = velocityY;
         addRequirements(drivetrain);
@@ -71,12 +78,14 @@ public class AlignToHubOdometry extends Command {
     /**
      * Otonom constructor - sadece rotation (surus yok)
      */
-    public AlignToHubOdometry(CommandSwerveDrivetrain drivetrain) {
-        this(drivetrain, () -> 0, () -> 0);
+    public AlignToHubOdometry(CommandSwerveDrivetrain drivetrain, VisionSubsystem vision) {
+        this(drivetrain, vision, () -> 0, () -> 0);
     }
 
     @Override
     public void initialize() {
+        vision.setAlignmentActive(true);
+        lastHeadingError = 0.0;
         SmartDashboard.putString("HubAlign/Status", "Starting...");
     }
 
@@ -108,12 +117,21 @@ public class AlignToHubOdometry extends Command {
             strafeComp = vy * STRAFE_COMPENSATION_FACTOR;
         }
 
-        // Omega hesapla (P kontrol + strafe kompanzasyon)
-        double omega = (ROTATION_KP * headingError + strafeComp);
+        // PD kontrol: P ana guc, D titresimi onler (frenleme etkisi)
+        double derivative = headingError - lastHeadingError;
+        lastHeadingError = headingError;
 
-        // Minimum rotation snap - kucuk hatalarda bile donmeye devam et
+        double omega = (ROTATION_KP * headingError) + (ROTATION_KD * derivative * 50.0) + strafeComp;
+        // 50.0 = ~20ms loop'a gore D olcekleme
+
         double headingErrorDeg = Math.abs(Math.toDegrees(headingError));
-        if (headingErrorDeg > ANGLE_TOLERANCE_DEGREES
+
+        // Deadband: cok kucuk hatada omega=0 → titresimi tamamen keser
+        if (headingErrorDeg < ANGLE_DEADBAND_DEGREES) {
+            omega = 0.0;
+        }
+        // Minimum snap: deadband ustu ama cok kucuk omega → en az MIN ile don
+        else if (headingErrorDeg > ANGLE_TOLERANCE_DEGREES
                 && Math.abs(omega) < MIN_ANGULAR_SPEED_RAD_PER_SEC) {
             omega = Math.copySign(MIN_ANGULAR_SPEED_RAD_PER_SEC, omega);
         }
@@ -122,11 +140,10 @@ public class AlignToHubOdometry extends Command {
         omega = Math.max(-MAX_ANGULAR_SPEED_RAD_PER_SEC,
                 Math.min(MAX_ANGULAR_SPEED_RAD_PER_SEC, omega));
 
-        // Tolerans kontrolu (dashboard icin)
+        // Tolerans kontrolu
         boolean aimed = headingErrorDeg < ANGLE_TOLERANCE_DEGREES;
 
-        // Swerve kontrolu uygula - HERZAMAN omega uygula, 0'a kilitlenme yok
-        // KP * kucuk hata = kucuk omega → surekli duzeltme, tam 0'a yaklasir
+        // Swerve kontrolu uygula
         drivetrain.setControl(fieldCentric
             .withVelocityX(vx)
             .withVelocityY(vy)
@@ -144,6 +161,7 @@ public class AlignToHubOdometry extends Command {
 
     @Override
     public void end(boolean interrupted) {
+        vision.setAlignmentActive(false);
         drivetrain.setControl(fieldCentric
             .withVelocityX(0)
             .withVelocityY(0)

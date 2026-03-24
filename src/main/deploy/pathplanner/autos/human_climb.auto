@@ -17,9 +17,21 @@
           }
         },
         {
+          "type": "named",
+          "data": {
+            "name": "visionCorrect"
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "hc_2"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "visionCorrect"
           }
         },
         {
@@ -38,6 +50,18 @@
           "type": "path",
           "data": {
             "pathName": "hc_3"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "hc_4"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "hc_5"
           }
         }
       ]

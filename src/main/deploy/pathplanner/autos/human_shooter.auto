@@ -7,19 +7,31 @@
         {
           "type": "path",
           "data": {
-            "pathName": "half_1"
+            "pathName": "hs_1"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "visionCorrect"
           }
         },
         {
           "type": "wait",
           "data": {
-            "waitTime": 1.5
+            "waitTime": 2.0
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "half_2"
+            "pathName": "hs_2"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "visionCorrect"
           }
         },
         {

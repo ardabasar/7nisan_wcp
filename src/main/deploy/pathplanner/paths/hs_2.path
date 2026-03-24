@@ -3,25 +3,25 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 1.988,
-        "y": 3.861
+        "x": 0.396,
+        "y": 0.594
       },
       "prevControl": null,
       "nextControl": {
-        "x": 2.238,
-        "y": 3.861
+        "x": 0.9851263355180341,
+        "y": 1.372583595802435
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 1.988,
-        "y": 3.861
+        "x": 3.1083209509658247,
+        "y": 4.055478675241456
       },
       "prevControl": {
-        "x": 1.738,
-        "y": 3.861
+        "x": 2.0095788555047758,
+        "y": 2.6289734548280035
       },
       "nextControl": null,
       "isLocked": false,
@@ -33,7 +33,7 @@
   "pointTowardsZones": [],
   "eventMarkers": [],
   "globalConstraints": {
-    "maxVelocity": 3.5,
+    "maxVelocity": 1.25,
     "maxAcceleration": 7.0,
     "maxAngularVelocity": 540.0,
     "maxAngularAcceleration": 720.0,
@@ -42,13 +42,13 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": 180.0
+    "rotation": 0.0
   },
   "reversed": false,
-  "folder": "climb",
+  "folder": "human_shooter",
   "idealStartingState": {
     "velocity": 0,
     "rotation": 0.0
   },
-  "useDefaultConstraints": true
+  "useDefaultConstraints": false
 }

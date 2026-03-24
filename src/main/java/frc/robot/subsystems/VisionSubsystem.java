@@ -58,38 +58,36 @@ public class VisionSubsystem extends SubsystemBase {
     // ========================================================================
     // GUVENLIK FILTRELERI
     // ========================================================================
-    private static final double MAX_ANGULAR_VELOCITY_RAD_PER_SEC = Math.toRadians(720);  // hizli donus filtresi
+    private static final double MAX_ANGULAR_VELOCITY_RAD_PER_SEC = Math.toRadians(360);  // sadece cok hizli donuste skip
     private static final double MAX_AVG_TAG_DISTANCE_METERS      = 5.0;                  // 5m'ye kadar tag kabul et
-    private static final double MAX_SINGLE_TAG_AMBIGUITY         = 0.35;                 // tek tag icin genis ambiguity
+    private static final double MAX_SINGLE_TAG_AMBIGUITY         = 0.3;                  // tek tag ambiguity filtresi
 
-    // StdDev matrisleri - tag sayisina gore guven seviyesi
-    // Dusuk StdDev = vision'a cok guven, Yuksek StdDev = az guven
-    // KRITIK: MegaTag2 heading icin gyro kullanir, heading StdDev = 999999 olmali!
-    // Aksi halde kendi gyro verisini geri besler ve odometry BOZULUR.
+    // ========================================================================
+    // STDDEV MATRISLERI
+    // ========================================================================
+    // MegaTag2 heading icin gyro kullanir:
+    //   - 1 tag: heading IGNORE (tek tag heading guvenilmez)
+    //   - 2+ tag: heading HAFIF duzelt (gyro drift telafisi icin)
+    //   - 3+ tag: heading ORTA duzelt
+    // XY StdDev'leri DUSUK = vision'a COK guven = tag gorununce HEMEN duzelt
     private static final Matrix<N3, N1> STD_DEV_1_TAG =
-        VecBuilder.fill(0.7,  0.7,  999999);   // tek tag: orta guven XY, heading IGNORE
+        VecBuilder.fill(0.5,  0.5,  999999);               // tek tag: heading IGNORE
     private static final Matrix<N3, N1> STD_DEV_2_TAG =
-        VecBuilder.fill(0.3, 0.3, 999999);     // 2 tag: iyi guven XY, heading IGNORE
+        VecBuilder.fill(0.15, 0.15, Math.toRadians(30));   // 2 tag: heading hafif duzelt
     private static final Matrix<N3, N1> STD_DEV_3_TAG =
-        VecBuilder.fill(0.10, 0.10, 999999);   // 3+ tag: cok yuksek guven XY, heading IGNORE
+        VecBuilder.fill(0.05, 0.05, Math.toRadians(15));   // 3+ tag: heading daha iyi duzelt
 
-    // Vision seed tracking - odometry en az 1 kez vision ile guncellendi mi?
+    // Vision seed tracking
     private boolean visionSeeded = false;
     private int visionUpdateCount = 0;
 
-    // Pose jump rejection
+    // Son kabul edilen vision verisi (jump rejection icin)
     private Pose2d lastAcceptedPose = null;
     private double lastAcceptedTimestampSeconds = -1.0;
-    private static final double MAX_POSE_JUMP_METERS = 2.0;                       // art arda okumalarda max sicrama
-    private static final double MAX_VISION_GAP_FOR_JUMP_CHECK_SECONDS = 1.5;      // bu sureden kisa gap'te jump kontrol et
-    private static final double MAX_REACQUIRE_ODOM_DIFF_METERS = 4.0;             // uzun gap sonrasi max fark
-    private static final double MAX_HARD_RESEED_LINEAR_SPEED_MPS = 0.20;          // neredeyse duruyor say
-    private static final double MAX_HARD_RESEED_ANGULAR_SPEED_RAD_PER_SEC =
-        Math.toRadians(45);
-    private static final double MIN_HARD_RESEED_POSE_DIFF_METERS = 0.08;          // anlamsiz minik farklar icin reset yapma
-    private static final double MAX_HARD_RESEED_POSE_DIFF_METERS = 1.25;          // cok buyuk outlier'lari hard resetleme
-    private static final double HARD_RESEED_MAX_AVG_TAG_DISTANCE_METERS = 3.0;    // yakin tag'lerde sert duzelt
-    private static final int HARD_RESEED_MIN_TAG_COUNT = 2;                        // tek tag'de hard reset agresif olabilir
+
+    // Hizalama aktifken resetPose YAPMA (titreme onleme)
+    // AlignToHubOdometry gibi komutlar bunu true yapar
+    private boolean alignmentActive = false;
 
     // SmartDashboard throttle
     private static final int DASHBOARD_INTERVAL = 10;
@@ -355,6 +353,11 @@ public class VisionSubsystem extends SubsystemBase {
         return enabled;
     }
 
+    /** Hizalama aktifken true yap → resetPose devre disi, sadece soft fusion */
+    public void setAlignmentActive(boolean active) {
+        this.alignmentActive = active;
+    }
+
     // ========================================================================
     // PERIODIC - Her loop'ta calisir
     // ========================================================================
@@ -435,7 +438,8 @@ public class VisionSubsystem extends SubsystemBase {
         }
 
         // ==================================================================
-        // VISION FUZYONU - Sadece enable ise calisir
+        // VISION FUZYONU - vision kapali degilse HERZAMAN calisir
+        // Disabled, teleop, otonom → FARK ETMEZ, tag goruyorsa DUZELT
         // ==================================================================
         if (!enabled) {
             if (loopCount % DASHBOARD_INTERVAL == 0) {
@@ -444,23 +448,19 @@ public class VisionSubsystem extends SubsystemBase {
             return;
         }
 
-        // Robot yaw + yaw rate -> Limelight (MegaTag2 icin)
+        // Robot yaw + yaw rate -> Limelight (MegaTag2 icin KRITIK)
         double yawDeg = drivetrain.getPigeon2().getYaw().getValueAsDouble();
-        double yawRateDegPerSec = Math.toDegrees(drivetrain.getState().Speeds.omegaRadiansPerSecond);
-        LimelightHelpers.SetRobotOrientation(limelightName, yawDeg, yawRateDegPerSec, 0, 0, 0, 0);
+        double yawRateDps = Math.toDegrees(drivetrain.getState().Speeds.omegaRadiansPerSecond);
+        LimelightHelpers.SetRobotOrientation(limelightName, yawDeg, yawRateDps, 0, 0, 0, 0);
 
-        // Limelight ham veri kontrolu - tag goruyor mu?
+        // Limelight durum
         boolean llHasTarget = LimelightHelpers.getTV(limelightName);
-        double llTagId = LimelightHelpers.getFiducialID(limelightName);
-
         if (loopCount % DASHBOARD_INTERVAL == 0) {
             SmartDashboard.putBoolean("Vision/LL_HasTarget", llHasTarget);
-            SmartDashboard.putNumber("Vision/LL_TagID", llTagId);
             SmartDashboard.putNumber("Vision/LL_Yaw", round2(yawDeg));
-            SmartDashboard.putString("Vision/Alliance", isRedAlliance ? "RED" : "BLUE");
         }
 
-        // Donen robot kontrolu
+        // Cok hizli donus filtresi - sadece extreme durumda skip
         double omega = drivetrain.getState().Speeds.omegaRadiansPerSecond;
         if (Math.abs(omega) > MAX_ANGULAR_VELOCITY_RAD_PER_SEC) {
             if (loopCount % DASHBOARD_INTERVAL == 0) {
@@ -469,54 +469,33 @@ public class VisionSubsystem extends SubsystemBase {
             return;
         }
 
-        // Pose tahmini al
-        // KRITIK: MegaTag2 HER ZAMAN wpiBlue kullanmali!
-        // WPILib, PathPlanner, CTRE hepsi blue-origin koordinat sistemi kullanir.
-        // wpiRed YANLIS koordinat verir ve odometry BOZULUR!
+        // ==================================================================
+        // POSE TAHMINI AL
+        // KRITIK: HER ZAMAN wpiBlue! wpiRed YANLIS koordinat verir.
+        // ==================================================================
         PoseEstimate estimate = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(limelightName);
 
-        // ============ DETAYLI REJECTION TESHISI ============
-        if (estimate == null || estimate.pose == null) {
-            if (loopCount % DASHBOARD_INTERVAL == 0) {
-                SmartDashboard.putString("Vision/Status", "REJECT:NullEstimate");
-            }
-            return;
-        }
-        if (estimate.tagCount <= 0) {
-            if (loopCount % DASHBOARD_INTERVAL == 0) {
-                SmartDashboard.putString("Vision/Status", "REJECT:NoTags(tagCount=0)");
-            }
-            return;
-        }
-        if (estimate.timestampSeconds <= 0) {
-            if (loopCount % DASHBOARD_INTERVAL == 0) {
-                SmartDashboard.putString("Vision/Status", "REJECT:BadTimestamp");
-            }
-            return;
-        }
+        // Temel rejection'lar
+        if (estimate == null || estimate.pose == null) return;
+        if (estimate.tagCount <= 0) return;
+        if (estimate.timestampSeconds <= 0) return;
         if (estimate.avgTagDist > MAX_AVG_TAG_DISTANCE_METERS) {
             if (loopCount % DASHBOARD_INTERVAL == 0) {
-                SmartDashboard.putString("Vision/Status",
-                    "REJECT:TooFar(" + round2(estimate.avgTagDist) + "m>5m)");
+                SmartDashboard.putString("Vision/Status", "Skip:TooFar");
             }
             return;
         }
-
+        // Tek tag ambiguity filtresi
         if (estimate.tagCount == 1
                 && estimate.rawFiducials != null
                 && estimate.rawFiducials.length > 0
                 && estimate.rawFiducials[0].ambiguity > MAX_SINGLE_TAG_AMBIGUITY) {
             if (loopCount % DASHBOARD_INTERVAL == 0) {
-                SmartDashboard.putString("Vision/Status",
-                    "REJECT:Ambiguity(" + round2(estimate.rawFiducials[0].ambiguity) + ">0.35)");
+                SmartDashboard.putString("Vision/Status", "Skip:Ambiguity");
             }
             return;
         }
-
-        // ==================================================================
-        // SAHA SINIR KONTROLU - Pose saha disindaysa reddet
-        // ±0.5m tolerans ile (robot kismen duvara yakin olabilir)
-        // ==================================================================
+        // Saha siniri
         if (estimate.pose.getX() < -0.5 || estimate.pose.getX() > FIELD_LENGTH + 0.5
                 || estimate.pose.getY() < -0.5 || estimate.pose.getY() > FIELD_WIDTH + 0.5) {
             if (loopCount % DASHBOARD_INTERVAL == 0) {
@@ -526,164 +505,156 @@ public class VisionSubsystem extends SubsystemBase {
         }
 
         // ==================================================================
-        // ANI SICRAMA KORUMASI (KILITLENME DAYANIKLI)
-        // - Kisa aralikli olcumlerde: son kabul edilen vision pose'una gore jump filtrele
-        // - Uzun tag kaybindan sonra: jump filtresini gecici devre disi birak,
-        //   odometry'den asiri uzak outlier'lari ele
+        // POSE FARKI VE HIZ HESABI
         // ==================================================================
-        final double visionGapSeconds = lastAcceptedTimestampSeconds > 0
-            ? estimate.timestampSeconds - lastAcceptedTimestampSeconds
-            : Double.POSITIVE_INFINITY;
+        double poseDiffMeters = estimate.pose.getTranslation()
+            .getDistance(currentPose.getTranslation());
+        double linearSpeedMps = Math.hypot(
+            drivetrain.getState().Speeds.vxMetersPerSecond,
+            drivetrain.getState().Speeds.vyMetersPerSecond
+        );
 
-        if (lastAcceptedPose != null && visionGapSeconds <= MAX_VISION_GAP_FOR_JUMP_CHECK_SECONDS) {
-            double jump = estimate.pose.getTranslation()
-                .getDistance(lastAcceptedPose.getTranslation());
-            if (jump > MAX_POSE_JUMP_METERS) {
-                if (loopCount % DASHBOARD_INTERVAL == 0) {
-                    SmartDashboard.putString("Vision/Status", "Skip:PoseJump");
-                }
-                return;
-            }
+        // ==================================================================
+        // 1) ILK SEED - Hic tag gorulmemis, HEMEN resetPose
+        // Disabled'da bile calisir! Robot acilir acilmaz konum alir.
+        // ==================================================================
+        if (!visionSeeded) {
+            // ILK SEED: TAM POSE al (XY + Heading)
+            // Robot ilk acildiginda gyro 0° ile baslar, gercek yon farkli olabilir.
+            // MegaTag2 heading gyro'dan geliyor DOGRU, ama ilk an'da
+            // gyro henuz dogru yonu bilmiyor → vision'in verdigi heading'i al.
+            // Bu resetPose ayni zamanda gyro offset'ini de duzeltiyor.
+            drivetrain.resetPose(estimate.pose);
+            drivetrain.markVisionSeeded();
+            visionSeeded = true;
+            lastAcceptedPose = estimate.pose;
+            lastAcceptedTimestampSeconds = estimate.timestampSeconds;
+            visionUpdateCount++;
+            SmartDashboard.putString("Vision/Status", "SEEDED!");
+            return;
         }
 
-        if (visionGapSeconds > MAX_VISION_GAP_FOR_JUMP_CHECK_SECONDS) {
-            double odomDiff = estimate.pose.getTranslation()
-                .getDistance(currentPose.getTranslation());
-            if (odomDiff > MAX_REACQUIRE_ODOM_DIFF_METERS) {
+        // ==================================================================
+        // 2) DISABLED MOD - Robot enable degil
+        // Buyuk fark varsa resetle, kucukse smooth guncelle.
+        // Titreme onleme: fark cok kucukse (< 3cm) → hic bir sey yapma.
+        // ==================================================================
+        if (DriverStation.isDisabled()) {
+            if (poseDiffMeters > 0.5) {
+                // Robot elle tasindi veya odometry cok kaymis → SERT RESET (sadece XY!)
+                Pose2d corrected = new Pose2d(
+                    estimate.pose.getTranslation(),
+                    currentPose.getRotation()  // gyro heading koru
+                );
+                drivetrain.resetPose(corrected);
                 if (loopCount % DASHBOARD_INTERVAL == 0) {
-                    SmartDashboard.putString("Vision/Status", "Skip:ReacquireOutlier");
+                    SmartDashboard.putString("Vision/Status", "DISABLED:RESET");
                 }
-                return;
+            } else if (poseDiffMeters > 0.03) {
+                // Orta fark → smooth duzeltme
+                drivetrain.addVisionMeasurement(estimate.pose, estimate.timestampSeconds,
+                    VecBuilder.fill(0.10, 0.10, 999999));
+                if (loopCount % DASHBOARD_INTERVAL == 0) {
+                    SmartDashboard.putString("Vision/Status", "DISABLED:SMOOTH");
+                }
+            } else {
+                // < 3cm fark → titreme onleme, DOKUNMA
+                if (loopCount % DASHBOARD_INTERVAL == 0) {
+                    SmartDashboard.putString("Vision/Status", "DISABLED:STABLE");
+                }
+            }
+            lastAcceptedPose = estimate.pose;
+            lastAcceptedTimestampSeconds = estimate.timestampSeconds;
+            visionUpdateCount++;
+            return;
+        }
+
+        // ==================================================================
+        // 3) ENABLED MOD - Teleop veya Otonom
+        // ==================================================================
+
+        // --- JUMP REJECTION (sadece art arda hizli okumalar icin) ---
+        // Eger son 0.5 sn icinde okuma geldiyse ve 3m'den fazla sicradiysa → outlier
+        if (lastAcceptedPose != null && lastAcceptedTimestampSeconds > 0) {
+            double gap = estimate.timestampSeconds - lastAcceptedTimestampSeconds;
+            if (gap < 0.5 && gap > 0) {
+                double jump = estimate.pose.getTranslation()
+                    .getDistance(lastAcceptedPose.getTranslation());
+                if (jump > 3.0) {
+                    if (loopCount % DASHBOARD_INTERVAL == 0) {
+                        SmartDashboard.putString("Vision/Status", "Skip:Jump(" + round2(jump) + "m)");
+                    }
+                    return;
+                }
             }
         }
 
         lastAcceptedPose = estimate.pose;
         lastAcceptedTimestampSeconds = estimate.timestampSeconds;
 
-        // ==================================================================
-        // MESAFE BAZLI STDDEV OLCEKLEME
-        // Tag count + mesafe carpani ile guven ayarlama
-        // ==================================================================
+        // --- SERT DUZELTME: Robot yavas + tag gordu + fark buyuk ---
+        // Hiz dusukken ve pose farki varsa → tag DOGRU, odometry YANLIS
+        // KRITIK: Sadece XY resetle, heading'e DOKUNMA!
+        // MegaTag2 heading = gyro verisi, resetPose heading'i de degistirir → yamuklik yapar
+        // DIKKAT: Hizalama aktifken sert reset YAPMA (titreme yapar!)
+        if (!alignmentActive && poseDiffMeters > 0.15 && linearSpeedMps < 0.5 && Math.abs(omega) < Math.toRadians(60)) {
+            boolean trustworthy = (estimate.tagCount >= 2)
+                || (estimate.tagCount == 1 && estimate.avgTagDist < 2.5);
+
+            if (trustworthy) {
+                // SADECE XY duzelt, heading'i koru (gyro heading her zaman dogru)
+                Pose2d correctedPose = new Pose2d(
+                    estimate.pose.getTranslation(),
+                    currentPose.getRotation()  // mevcut gyro heading'i koru!
+                );
+                drivetrain.resetPose(correctedPose);
+                visionUpdateCount++;
+                if (loopCount % DASHBOARD_INTERVAL == 0) {
+                    SmartDashboard.putString("Vision/Status",
+                        "HARD-RESET-XY(diff=" + round2(poseDiffMeters) + "m)");
+                    SmartDashboard.putNumber("Vision/Tags", estimate.tagCount);
+                }
+                return;
+            }
+        }
+
+        // --- NORMAL FUZYON: Kalman filter ile surekli duzeltme ---
+        // Mesafe bazli quadratic StdDev (smooth scaling, step function degil)
+        double distFactor = Math.max(1.0, 0.5 * Math.pow(estimate.avgTagDist, 2.0) / estimate.tagCount);
+
         Matrix<N3, N1> baseStdDevs;
         if      (estimate.tagCount >= 3) baseStdDevs = STD_DEV_3_TAG;
         else if (estimate.tagCount >= 2) baseStdDevs = STD_DEV_2_TAG;
         else                             baseStdDevs = STD_DEV_1_TAG;
 
-        // Uzak tag = daha az guvenilir ama kabul edilir
-        double distFactor = 1.0;
-        if (estimate.avgTagDist > 4.0)      distFactor = 3.0;  // 4m+: az guven
-        else if (estimate.avgTagDist > 3.0) distFactor = 2.0;  // 3-4m: orta-az
-        else if (estimate.avgTagDist > 2.0) distFactor = 1.5;  // 2-3m: orta
-        else if (estimate.avgTagDist > 1.0) distFactor = 1.0;  // 1-2m: tam guven
+        // Heading StdDev: base'den al (tek tag=999999, 2+ tag= duzeltme yapar)
+        double headingStdDev = baseStdDevs.get(2, 0);
+        // Uzak tag'lerde heading'e daha az guven
+        if (headingStdDev < 999990) {
+            headingStdDev *= distFactor;
+        }
 
         Matrix<N3, N1> scaledStdDevs = VecBuilder.fill(
             baseStdDevs.get(0, 0) * distFactor,
             baseStdDevs.get(1, 0) * distFactor,
-            baseStdDevs.get(2, 0) * distFactor
+            headingStdDev
         );
 
-        // ==================================================================
-        // ILK SEED - ilk kez tag goruldugunde pozisyonu HEMEN al
-        // KRITIK: addVisionMeasurement DEGIL, resetPose kullan.
-        // ==================================================================
-        if (!visionSeeded) {
-            drivetrain.resetPose(estimate.pose);
-            drivetrain.markVisionSeeded();
-            visionSeeded = true;
-            visionUpdateCount++;
-
-            if (loopCount % DASHBOARD_INTERVAL == 0) {
-                SmartDashboard.putString("Vision/Status", "SEEDED-MT2");
-                SmartDashboard.putNumber("Vision/Tags", estimate.tagCount);
-                SmartDashboard.putNumber("Vision/AvgDist", estimate.avgTagDist);
-                SmartDashboard.putNumber("Vision/PoseX", estimate.pose.getX());
-                SmartDashboard.putNumber("Vision/PoseY", estimate.pose.getY());
-                SmartDashboard.putNumber("Vision/UpdateCount", visionUpdateCount);
-            }
-            return;
+        // Hiz carpani: hizli giderken vision biraz daha az guvenilir
+        if (linearSpeedMps > 2.0) {
+            scaledStdDevs = VecBuilder.fill(
+                scaledStdDevs.get(0, 0) * 1.5,
+                scaledStdDevs.get(1, 0) * 1.5,
+                headingStdDev  // heading ayni kalsin, hiz heading'i etkilemez
+            );
         }
 
-        // ==================================================================
-        // DISABLED RESEED - robot enable olmadan tag gorurse pose'u surekli taze tut
-        // Bu sayede saha kenarinda robotu yerlestirirken odometry donuk kalmaz.
-        // ==================================================================
-        double linearSpeedMps = Math.hypot(
-            drivetrain.getState().Speeds.vxMetersPerSecond,
-            drivetrain.getState().Speeds.vyMetersPerSecond
-        );
-        double poseDiffMeters = estimate.pose.getTranslation()
-            .getDistance(currentPose.getTranslation());
-
-        if (DriverStation.isDisabled()) {
-            drivetrain.resetPose(estimate.pose);
-            drivetrain.markVisionSeeded();
-            visionSeeded = true;
-            visionUpdateCount++;
-
-            if (loopCount % DASHBOARD_INTERVAL == 0) {
-                SmartDashboard.putString("Vision/Status", "RESEED-DISABLED");
-                SmartDashboard.putNumber("Vision/PoseDiff", round2(poseDiffMeters));
-                SmartDashboard.putNumber("Vision/Tags", estimate.tagCount);
-                SmartDashboard.putNumber("Vision/AvgDist", estimate.avgTagDist);
-            }
-            return;
-        }
-
-        // ==================================================================
-        // HARD RESEED - robot neredeyse dururken ve vision cok guvenilirken
-        // pozisyonu sert sekilde duzelt. Bu, atis/otonom oncesi biriken drift'i
-        // tag goruldugu anda daha hizli toparlar.
-        // ==================================================================
-        boolean canHardReseed =
-            estimate.tagCount >= HARD_RESEED_MIN_TAG_COUNT
-            && estimate.avgTagDist <= HARD_RESEED_MAX_AVG_TAG_DISTANCE_METERS
-            && linearSpeedMps <= MAX_HARD_RESEED_LINEAR_SPEED_MPS
-            && Math.abs(omega) <= MAX_HARD_RESEED_ANGULAR_SPEED_RAD_PER_SEC
-            && poseDiffMeters >= MIN_HARD_RESEED_POSE_DIFF_METERS
-            && poseDiffMeters <= MAX_HARD_RESEED_POSE_DIFF_METERS;
-
-        if (canHardReseed) {
-            drivetrain.resetPose(estimate.pose);
-            drivetrain.markVisionSeeded();
-            visionSeeded = true;
-            visionUpdateCount++;
-
-            if (loopCount % DASHBOARD_INTERVAL == 0) {
-                SmartDashboard.putString("Vision/Status", "HARD-RESEED");
-                SmartDashboard.putNumber("Vision/PoseDiff", round2(poseDiffMeters));
-                SmartDashboard.putNumber("Vision/LinearSpeed", round2(linearSpeedMps));
-                SmartDashboard.putNumber("Vision/Tags", estimate.tagCount);
-                SmartDashboard.putNumber("Vision/AvgDist", estimate.avgTagDist);
-            }
-            return;
-        }
-
-        // ==================================================================
-        // GAP COMPENSATION - Tag kaybettikten sonra geri gordugunde
-        // odometry kaymis olabilir, vision'a daha cok guven
-        // ==================================================================
-        if (visionSeeded && visionGapSeconds < Double.POSITIVE_INFINITY) {
-            if (visionGapSeconds > 2.0) {
-                // 2+ sn tag gorememisiz → odometry kaymis olabilir, vision'a guven
-                scaledStdDevs = VecBuilder.fill(0.10, 0.10, 999999);
-            } else if (visionGapSeconds > 1.0) {
-                // 1-2 sn gap → orta seviye duzeltme
-                scaledStdDevs = VecBuilder.fill(
-                    scaledStdDevs.get(0, 0) * 0.5,
-                    scaledStdDevs.get(1, 0) * 0.5,
-                    999999
-                );
-            }
-        }
-
-        // Odometry'e ekle
         drivetrain.addVisionMeasurement(estimate.pose, estimate.timestampSeconds, scaledStdDevs);
-        visionSeeded = true;
         visionUpdateCount++;
 
-        // Vision status
         if (loopCount % DASHBOARD_INTERVAL == 0) {
-            SmartDashboard.putString("Vision/Status",  "OK-MT2");
+            SmartDashboard.putString("Vision/Status", "OK(tags=" + estimate.tagCount
+                + " dist=" + round2(estimate.avgTagDist) + "m diff=" + round2(poseDiffMeters) + "m)");
             SmartDashboard.putNumber("Vision/Tags",    estimate.tagCount);
             SmartDashboard.putNumber("Vision/AvgDist", estimate.avgTagDist);
             SmartDashboard.putNumber("Vision/PoseX",   estimate.pose.getX());

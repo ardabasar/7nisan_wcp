@@ -167,7 +167,7 @@ public class RobotContainer {
 
         // Hizalama (614 tarzi odometry+hub yonu bazli)
         NamedCommands.registerCommand("alignToTag",
-            new AlignToHubOdometry(drivetrain).withTimeout(3.0));
+            new AlignToHubOdometry(drivetrain, vision).withTimeout(3.0));
 
         // Climb yukari (mekanizmayi uzat) - 3 saniye
         NamedCommands.registerCommand("climbUp",
@@ -316,7 +316,7 @@ public class RobotContainer {
         // AprilTag gorunmese bile calisir (vision seed yeterli).
         // ==================================================================
         joystick.rightBumper().whileTrue(
-            new AlignToHubOdometry(drivetrain,
+            new AlignToHubOdometry(drivetrain, vision,
                 () -> {
                     double sign = driveXYInverted ? -1.0 : 1.0;
                     return sign * shapeInput(-joystick.getLeftY()) * MaxSpeed;

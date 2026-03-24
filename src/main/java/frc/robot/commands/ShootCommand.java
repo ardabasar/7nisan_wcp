@@ -49,8 +49,8 @@ public class ShootCommand extends Command {
     // Asagi hiz dusuk: yercekimi yardim eder, motor zorlanmaz.
     private static final double ARM_UP_SPEED = 0.20; // yukari hiz
     private static final double ARM_DOWN_SPEED = -0.20; // asagi hiz (esit kalkip insin)
-    private static final double ARM_UP_SECONDS = 0.40; // yukari suresi
-    private static final double ARM_DOWN_SECONDS = 0.40; // asagi suresi
+    private static final double ARM_UP_SECONDS = 0.50; // yukari suresi
+    private static final double ARM_DOWN_SECONDS = 0.50; // asagi suresi
     private static final double ARM_CYCLE_SECONDS = ARM_UP_SECONDS + ARM_DOWN_SECONDS;
 
     // ========================================================================
@@ -66,22 +66,21 @@ public class ShootCommand extends Command {
                             .interpolate(startValue.hoodPosition, endValue.hoodPosition, t)));
 
     static {
-        /* ORIJINAL DEGERLER - WCP referans bazli */
-        distanceToShotMap.put(Inches.of(36.0), new Shot(2880, 0.12)); // Hub dibinden atis
-        distanceToShotMap.put(Inches.of(52.0), new Shot(3360, 0.19)); // En yakin
-        distanceToShotMap.put(Inches.of(72.0), new Shot(3540, 0.25)); // Yakin-orta
-        distanceToShotMap.put(Inches.of(92.0), new Shot(3720, 0.31)); // Orta-yakin
-        distanceToShotMap.put(Inches.of(114.4), new Shot(3930, 0.40)); // Orta (WCP referans)
-        distanceToShotMap.put(Inches.of(132.0), new Shot(4080, 0.43)); // Orta-uzak
-        distanceToShotMap.put(Inches.of(150.0), new Shot(4260, 0.46)); // Uzak
-        distanceToShotMap.put(Inches.of(165.5), new Shot(4380, 0.48)); // WCP uzak referans
+        distanceToShotMap.put(Inches.of(36.0), new Shot(2760, 0.12)); // Hub dibinden atis
+        distanceToShotMap.put(Inches.of(52.0), new Shot(3220, 0.19)); // En yakin
+        distanceToShotMap.put(Inches.of(72.0), new Shot(3393, 0.25)); // Yakin-orta
+        distanceToShotMap.put(Inches.of(92.0), new Shot(3565, 0.31)); // Orta-yakin
+        distanceToShotMap.put(Inches.of(114.4), new Shot(3766, 0.40)); // Orta (WCP referans)
+        distanceToShotMap.put(Inches.of(132.0), new Shot(3910, 0.43)); // Orta-uzak
+        distanceToShotMap.put(Inches.of(150.0), new Shot(4083, 0.46)); // Uzak
+        distanceToShotMap.put(Inches.of(165.5), new Shot(4198, 0.48)); // WCP uzak referans
 
-// Uzun menzil (tower/human tarafi yakini) - sahada tune edilecek
-        distanceToShotMap.put(Inches.of(182.0), new Shot(4536, 0.51));
-        distanceToShotMap.put(Inches.of(200.0), new Shot(4692, 0.55));
-        distanceToShotMap.put(Inches.of(220.0), new Shot(4860, 0.59));
-        distanceToShotMap.put(Inches.of(235.0), new Shot(4980, 0.62));
-        distanceToShotMap.put(Inches.of(242.0), new Shot(5040, 0.64)); // Human side'e yakin ust limit
+        // Uzun menzil (tower/human tarafi yakini) - sahada tune edilecek
+        distanceToShotMap.put(Inches.of(182.0), new Shot(4347, 0.51));
+        distanceToShotMap.put(Inches.of(200.0), new Shot(4497, 0.55));
+        distanceToShotMap.put(Inches.of(220.0), new Shot(4657, 0.59));
+        distanceToShotMap.put(Inches.of(235.0), new Shot(4773, 0.62));
+        distanceToShotMap.put(Inches.of(242.0), new Shot(4830, 0.64)); // Human side'e yakin ust limit
     }
 
     // ========================================================================
@@ -260,9 +259,9 @@ public class ShootCommand extends Command {
     // MESAFE OLCUMU - Sadece Odometry (hub merkezine mesafe)
     // ========================================================================
     // NEDEN LIMELIGHT DIREKT KULLANILMIYOR:
-    //   Limelight hangi tag'i goruyorsa ONA mesafe olcer.
-    //   Eger tower/trench/outpost tag'i goruyorsa yanlis mesafe verir.
-    //   Odometry her zaman hub MERKEZINE mesafe verir → dogru RPM.
+    // Limelight hangi tag'i goruyorsa ONA mesafe olcer.
+    // Eger tower/trench/outpost tag'i goruyorsa yanlis mesafe verir.
+    // Odometry her zaman hub MERKEZINE mesafe verir → dogru RPM.
     // ========================================================================
     private String lastDistanceSource = "None";
 
