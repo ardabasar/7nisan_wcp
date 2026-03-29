@@ -83,9 +83,9 @@ public class IntakeArmSubsystem extends SubsystemBase {
         TalonFXConfiguration config = new TalonFXConfiguration();
         config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         config.CurrentLimits.StatorCurrentLimitEnable = true;
-        config.CurrentLimits.StatorCurrentLimit = 30.0;
+        config.CurrentLimits.StatorCurrentLimit = 120.0;
         config.CurrentLimits.SupplyCurrentLimitEnable = true;
-        config.CurrentLimits.SupplyCurrentLimit = 20.0;
+        config.CurrentLimits.SupplyCurrentLimit = 38.0;
         motor.getConfigurator().apply(config);
     }
 

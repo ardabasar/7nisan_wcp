@@ -58,6 +58,7 @@ public class VisionSubsystem extends SubsystemBase {
     private static final double MAX_ANGULAR_VELOCITY_RAD_PER_SEC = Math.toRadians(360);  // sadece cok hizli donuste skip
     private static final double MAX_AVG_TAG_DISTANCE_METERS      = 5.0;                  // 5m'ye kadar tag kabul et
     private static final double MAX_SINGLE_TAG_AMBIGUITY         = 0.3;                  // tek tag ambiguity filtresi
+    private static final double BUMP_PITCH_THRESHOLD_DEG         = 5.0;                  // pitch > 5° → robot tumsekte
 
     // ========================================================================
     // STDDEV HESABI (Turkiye 1.si + Dunya Finalisti hibrit)
@@ -453,6 +454,17 @@ public class VisionSubsystem extends SubsystemBase {
             SmartDashboard.putNumber("Vision/LL_Yaw", round2(yawDeg));
         }
 
+        // Tumsek tespiti: Pitch veya Roll > 5° ise robot tumsekte
+        // 45 derece capraz cikislarda ROLL de degisir, sadece pitch yetmez
+        // Bu durumda odometri guvenilmez → vision'a EKSTRA guven
+        double pitchDeg = drivetrain.getPigeon2().getPitch().getValueAsDouble();
+        double rollDeg = drivetrain.getPigeon2().getRoll().getValueAsDouble();
+        boolean onBump = Math.abs(pitchDeg) > BUMP_PITCH_THRESHOLD_DEG
+                      || Math.abs(rollDeg) > BUMP_PITCH_THRESHOLD_DEG;
+        if (loopCount % DASHBOARD_INTERVAL == 0) {
+            SmartDashboard.putBoolean("Vision/OnBump", onBump);
+        }
+
         // Cok hizli donus filtresi - sadece extreme durumda skip
         double omega = drivetrain.getState().Speeds.omegaRadiansPerSecond;
         if (Math.abs(omega) > MAX_ANGULAR_VELOCITY_RAD_PER_SEC) {
@@ -499,7 +511,7 @@ public class VisionSubsystem extends SubsystemBase {
             }
             return;
         }
-
+        // Guvenilir tag filtresi - sahanizda yanlis yerdeki tag'leri ignore et
         // ==================================================================
         // POSE FARKI VE HIZ HESABI
         // ==================================================================
@@ -638,6 +650,13 @@ public class VisionSubsystem extends SubsystemBase {
         // Hiz carpani: hizli giderken vision biraz daha az guvenilir
         if (linearSpeedMps > 2.0) {
             xyStdDev *= 1.5;
+        }
+
+        // TUMSEK KORUMASI: Robot tumsekteyken odometri guvenilmez
+        // Vision'a ekstra guven ver → StdDev'i dusur (kucuk = daha guvenilir)
+        // Bu, tekerleklerin havada donmesinden kaynaklanan hayali ilerlemeyi duzeltir
+        if (onBump) {
+            xyStdDev *= 0.3;  // Tumsekte vision'a 3x daha fazla guven
         }
 
         // Heading: 2+ tag → MegaTag1 heading'e guven, 1 tag → dokunma
@@ -841,6 +860,42 @@ public class VisionSubsystem extends SubsystemBase {
         double distRed  = robotPos.getDistance(RED_HUB_CENTER);
         double distBlue = robotPos.getDistance(BLUE_HUB_CENTER);
         return Math.min(distRed, distBlue);
+    }
+
+    /**
+     * TUMSEK CIKISI HARD RESET - PathPlanner Event Marker ile tetiklenir.
+     * Robot tumsekten indikten sonra, AprilTag goruyorsa konumunu aninda duzeltir.
+     * resetPose KULLANMAZ (Kalman filtreyi bozar), bunun yerine
+     * cok dusuk StdDev ile addVisionMeasurement yapar → ayni etki, guvenli.
+     *
+     * PathPlanner'da Event Marker ismi: "KonumDuzelt"
+     * RobotContainer'da: NamedCommands.registerCommand("KonumDuzelt",
+     *     new InstantCommand(() -> vision.forceVisionUpdate()));
+     */
+    public void forceVisionUpdate() {
+        PoseEstimate estimate = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(limelightName);
+        if (estimate == null || estimate.pose == null || estimate.tagCount <= 0) {
+            SmartDashboard.putString("Vision/Status", "FORCE:NoTag!");
+            return;
+        }
+        if (estimate.avgTagDist > MAX_AVG_TAG_DISTANCE_METERS) {
+            SmartDashboard.putString("Vision/Status", "FORCE:TooFar!");
+            return;
+        }
+
+        // Heading: MegaTag1 2+ tag varsa heading de duzelt
+        PoseEstimate mt1 = LimelightHelpers.getBotPoseEstimate_wpiBlue(limelightName);
+        double hdgStdDev = 999999;
+        if (mt1 != null && mt1.tagCount >= 2) {
+            hdgStdDev = 0.05;  // Force modda heading'e ekstra guven
+        }
+
+        // Agresif vision update (resetPose degil!)
+        drivetrain.addVisionMeasurement(estimate.pose, estimate.timestampSeconds,
+            VecBuilder.fill(0.01, 0.01, hdgStdDev));
+        visionUpdateCount++;
+        SmartDashboard.putString("Vision/Status",
+            "FORCE-SYNC(tags=" + estimate.tagCount + " dist=" + round2(estimate.avgTagDist) + "m)");
     }
 
     /**

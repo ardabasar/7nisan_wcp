@@ -1,0 +1,91 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "natural_zone_center_left"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "visionCorrect"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "nz_2"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "nz_3"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "visionCorrect"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "intakeStart"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "nz_4"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "nz_5"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "intakeStop"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "nz_6"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "nz-7"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "alignToTag"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "shoot"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": false
+}

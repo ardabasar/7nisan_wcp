@@ -3,10 +3,12 @@
   "robotLength": 0.762,
   "holonomicMode": true,
   "pathFolders": [
-    "left_balls",
+    "natural_zone_right",
     "center_human_climb",
     "human_climb",
-    "human_shooter"
+    "human_shooter",
+    "left_balls",
+    "natural_zone_left"
   ],
   "autoFolders": [],
   "defaultMaxVel": 3.5,

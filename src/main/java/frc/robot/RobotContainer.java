@@ -33,6 +33,7 @@ import frc.robot.commands.auto.AutoAlignToTagCommand;
 import frc.robot.commands.auto.TowerDriveCommand;
 import frc.robot.commands.auto.TowerRotateCommand;
 import frc.robot.commands.auto.VisionAutoSeedCommand;
+import frc.robot.commands.auto.AutoShootCommand;
 import frc.robot.commands.auto.VisionCorrectCommand;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
@@ -153,10 +154,15 @@ public class RobotContainer {
     // NAMED COMMANDS (PathPlanner Otonom icin)
     // ========================================================================
     private void registerNamedCommands() {
-        // Atis: Shooter + Hood + Feeder + Hopper + IntakeArm agitasyon
+        // Atis (teleop): Shooter + Hood + Feeder + Hopper + IntakeArm agitasyon
         NamedCommands.registerCommand("shoot",
             new ShootCommand(shooter, hood, feeder, hopper, vision, "limelight", intakeArm)
-                .withTimeout(10.0));
+                .withTimeout(5.0));
+
+        // Atis (otonom): Ayni mantik ama otomatik bitis (~3s)
+        // Spin-up + 2.5s besleme, max 4s guvenlik timeout
+        NamedCommands.registerCommand("autoShoot",
+            new AutoShootCommand(shooter, hood, feeder, hopper, vision, "limelight", intakeArm));
 
         // Intake: Arm + Roller
         NamedCommands.registerCommand("intake",
@@ -168,7 +174,7 @@ public class RobotContainer {
 
         // Hizalama (614 tarzi odometry+hub yonu bazli)
         NamedCommands.registerCommand("alignToTag",
-            new AlignToHubOdometry(drivetrain, vision).withTimeout(3.0));
+            new AlignToHubOdometry(drivetrain, vision).withTimeout(0.5));
 
         // Climb yukari (mekanizmayi uzat) - 3 saniye
         NamedCommands.registerCommand("climbUp",
@@ -235,9 +241,29 @@ public class RobotContainer {
                 () -> intakeRoller.stop(),
                 intakeRoller));
 
+        // Intake BASLAT - sadece roller, hopper YOK
+        NamedCommands.registerCommand("intakeStart",
+            Commands.runOnce(() -> {
+                intakeRoller.run();
+            }));
+
+        // Intake DURDUR - sadece roller
+        NamedCommands.registerCommand("intakeStop",
+            Commands.runOnce(() -> {
+                intakeRoller.stop();
+            }));
+
         // Vision kontrol
         NamedCommands.registerCommand("visionOn", Commands.runOnce(() -> vision.setEnabled(true)));
         NamedCommands.registerCommand("visionOff", Commands.runOnce(() -> vision.setEnabled(false)));
+
+        // Tumsek cikisi konum duzeltme - PathPlanner Event Marker ile tetiklenir
+        NamedCommands.registerCommand("KonumDuzelt", Commands.runOnce(() -> vision.forceVisionUpdate()));
+
+        // Shooter onceden dondur - nzr_7 Event Marker ile tetikle, spin-up suresi kazandirir
+        NamedCommands.registerCommand("spinUp", Commands.runOnce(() -> {
+            shooter.setRPM(3500);
+        }));
     }
 
     /*

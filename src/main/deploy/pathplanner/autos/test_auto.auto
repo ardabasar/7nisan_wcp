@@ -1,0 +1,37 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "test_1"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "intakeStart"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "nzr_5"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "intakeStop"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": false
+}

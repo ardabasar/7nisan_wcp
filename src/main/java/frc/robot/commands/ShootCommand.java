@@ -35,9 +35,9 @@ public class ShootCommand extends Command {
     private static final double kShooterRpmScale = 1.06;
     private static final double kShooterReadyToleranceRPM = 150.0;
     private static final int kShooterReadyCyclesRequired = 3;
-    private static final double kMinFeedDelaySeconds = 0.20;
-    private static final double kSpinupFallbackSeconds = 0.6;
-    private static final double kSpinupFallbackRatio = 0.92;
+    private static final double kMinFeedDelaySeconds = 0.10;
+    private static final double kSpinupFallbackSeconds = 0.4;
+    private static final double kSpinupFallbackRatio = 0.85;
     private static final double kDistanceFilterAlpha = 0.10;
     private static final double kHoodDeadband = 0.02;
     private static final Distance kMinShotDistance = Inches.of(36.0);
@@ -52,8 +52,8 @@ public class ShootCommand extends Command {
     // Asagi hiz dusuk: yercekimi yardim eder, motor zorlanmaz.
     private static final double ARM_UP_SPEED = 0.25; // yukari hiz
     private static final double ARM_DOWN_SPEED = -0.25; // asagi hiz (esit kalkip insin)
-    private static final double ARM_UP_SECONDS = 0.50; // yukari suresi
-    private static final double ARM_DOWN_SECONDS = 0.50; // asagi suresi
+    private static final double ARM_UP_SECONDS = 0.40; // yukari suresi
+    private static final double ARM_DOWN_SECONDS = 0.40; // asagi suresi
     private static final double ARM_CYCLE_SECONDS = ARM_UP_SECONDS + ARM_DOWN_SECONDS;
 
     // ========================================================================
