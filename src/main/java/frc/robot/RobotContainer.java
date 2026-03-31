@@ -50,37 +50,55 @@ import frc.robot.subsystems.LEDSubsystem;
 import frc.robot.subsystems.VisionSubsystem;
 
 /**
+* ============================================================================
+* Bismillahirrahmanirrahim
+*
+* Ayet-el Kürsi (Bakara Suresi 255. Ayet)
+*
+* Allahu la ilahe illa huvel hayyul kayyum.
+* La te'huzuhu sinetun ve la nevm.
+* Lehu ma fis semavati ve ma fil ard.
+* Men zellezi yeşfeu indehu illa bi iznih.
+* Ya'lemu ma beyne eydihim ve ma halfehum.
+* Ve la yuhitune bi şey'in min ilmihi illa bi ma şa'.
+* Vesia kursiyyuhus semavati vel ard.
+* Ve la yeuduhu hıfzuhuma.
+* Ve huvel aliyyul azim.
+* ============================================================================
+*/
+
+/**
  * ============================================================================
  * ROBOT CONTAINER - 2026 REBUILT
  * ============================================================================
  * Tum subsystem'lerin ve command binding'lerinin merkezi.
  *
  * SUBSYSTEM'LER:
- *   - CommandSwerveDrivetrain: 4 modul swerve (Caracal CANivore, CAN 1-8)
- *   - VisionSubsystem: Limelight MegaTag2 lokalizasyon
- *   - ShooterSubsystem: 3x TalonFX (CAN 9 +yon, CAN 10-11 -yon)
- *   - IntakeArmSubsystem: 1x TalonFX encoder pozisyon (CAN 12)
- *   - IntakeRollerSubsystem: 1x TalonFX roller (CAN 13)
- *   - HopperSubsystem: 1x TalonFX kayis (CAN 14)
- *   - FeederSubsystem: 1x TalonFX shooter beslemesi (CAN 15)
- *   - ClimbSubsystem: 1x TalonFX asma (CAN 16)
- *   - HoodSubsystem: 2x Servo pozisyon (PWM 3-4)
+ * - CommandSwerveDrivetrain: 4 modul swerve (Caracal CANivore, CAN 1-8)
+ * - VisionSubsystem: Limelight MegaTag2 lokalizasyon
+ * - ShooterSubsystem: 3x TalonFX (CAN 9 +yon, CAN 10-11 -yon)
+ * - IntakeArmSubsystem: 1x TalonFX encoder pozisyon (CAN 12)
+ * - IntakeRollerSubsystem: 1x TalonFX roller (CAN 13)
+ * - HopperSubsystem: 1x TalonFX kayis (CAN 14)
+ * - FeederSubsystem: 1x TalonFX shooter beslemesi (CAN 15)
+ * - ClimbSubsystem: 1x TalonFX asma (CAN 16)
+ * - HoodSubsystem: 2x Servo pozisyon (PWM 3-4)
  *
  * CAN ID HARITASI:
- *   CANivore "Caracal" bus:
- *     Drive motorlari:  1, 3, 5, 7
- *     Steer motorlari:  2, 4, 6, 8
- *     CANcoders:        9, 10, 11, 12
- *     Pigeon2:          13
- *   rio bus:
- *     Shooter:          9 (+1 yon), 10 (-1 yon), 11 (-1 yon)
- *     Intake Arm:       12 (kol, encoder pozisyon)
- *     Intake Roller:    13 (silindir, 0.5 hiz)
- *     Hopper:           14 (kayis, -0.25 hiz)
- *     Feeder:           15 (shooter beslemesi, voltaj mantigi)
- *     Climb:            16 (+/-0.25 hiz)
- *   PWM:
- *     Hood servolar:    3 (sol), 4 (sag)
+ * CANivore "Caracal" bus:
+ * Drive motorlari: 1, 3, 5, 7
+ * Steer motorlari: 2, 4, 6, 8
+ * CANcoders: 9, 10, 11, 12
+ * Pigeon2: 13
+ * rio bus:
+ * Shooter: 9 (+1 yon), 10 (-1 yon), 11 (-1 yon)
+ * Intake Arm: 12 (kol, encoder pozisyon)
+ * Intake Roller: 13 (silindir, 0.5 hiz)
+ * Hopper: 14 (kayis, -0.25 hiz)
+ * Feeder: 15 (shooter beslemesi, voltaj mantigi)
+ * Climb: 16 (+/-0.25 hiz)
+ * PWM:
+ * Hood servolar: 3 (sol), 4 (sag)
  * ============================================================================
  */
 public class RobotContainer {
@@ -93,7 +111,7 @@ public class RobotContainer {
     private static final double JOYSTICK_DEADBAND = 0.15;
     private static final double INPUT_CURVE_EXPONENT = 1.5;
     private static final double TRANSLATION_INPUT_RATE_LIMIT = 2.5; // joystick unit / s (daha yumusak ivme)
-    private static final double ROTATION_INPUT_RATE_LIMIT = 3.5;   // joystick unit / s (donus ivmesi)
+    private static final double ROTATION_INPUT_RATE_LIMIT = 3.5; // joystick unit / s (donus ivmesi)
     // ========================================================================
     // SWERVE REQUEST'LER
     // ========================================================================
@@ -117,15 +135,15 @@ public class RobotContainer {
     // SUBSYSTEM'LER
     // ========================================================================
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
-    private final VisionSubsystem vision         = new VisionSubsystem(drivetrain, "limelight");
-    private final ShooterSubsystem shooter       = new ShooterSubsystem();
-    private final HoodSubsystem hood             = new HoodSubsystem();
-    private final FeederSubsystem feeder         = new FeederSubsystem();
-    private final HopperSubsystem hopper         = new HopperSubsystem();
-    private final IntakeArmSubsystem intakeArm   = new IntakeArmSubsystem();
+    private final VisionSubsystem vision = new VisionSubsystem(drivetrain, "limelight");
+    private final ShooterSubsystem shooter = new ShooterSubsystem();
+    private final HoodSubsystem hood = new HoodSubsystem();
+    private final FeederSubsystem feeder = new FeederSubsystem();
+    private final HopperSubsystem hopper = new HopperSubsystem();
+    private final IntakeArmSubsystem intakeArm = new IntakeArmSubsystem();
     private final IntakeRollerSubsystem intakeRoller = new IntakeRollerSubsystem();
-    private final ClimbSubsystem climb           = new ClimbSubsystem();
-    private final LEDSubsystem leds             = new LEDSubsystem();
+    private final ClimbSubsystem climb = new ClimbSubsystem();
+    private final LEDSubsystem leds = new LEDSubsystem();
 
     // ========================================================================
     // OTONOM
@@ -139,10 +157,9 @@ public class RobotContainer {
         // Limelight kamera stream'ini dashboard'a gonder
         // Elastic'te "CameraServer" -> "limelight" olarak gorunur
         HttpCamera limelightCamera = new HttpCamera(
-            "limelight",
-            "http://10.95.45.11:5800/stream.mjpg",
-            HttpCameraKind.kMJPGStreamer
-        );
+                "limelight",
+                "http://10.95.45.11:5800/stream.mjpg",
+                HttpCameraKind.kMJPGStreamer);
         CameraServer.startAutomaticCapture(limelightCamera);
 
         registerNamedCommands();
@@ -159,25 +176,25 @@ public class RobotContainer {
     private void registerNamedCommands() {
         // Atis (teleop): Shooter + Hood + Feeder + Hopper + IntakeArm agitasyon
         NamedCommands.registerCommand("shoot",
-            new ShootCommand(shooter, hood, feeder, hopper, vision, "limelight", intakeArm)
-                .withTimeout(5.0));
+                new ShootCommand(shooter, hood, feeder, hopper, vision, "limelight", intakeArm)
+                        .withTimeout(5.0));
 
         // Atis (otonom): Ayni mantik ama otomatik bitis (~3s)
         // Spin-up + 2.5s besleme, max 4s guvenlik timeout
         NamedCommands.registerCommand("autoShoot",
-            new AutoShootCommand(shooter, hood, feeder, hopper, vision, "limelight", intakeArm));
+                new AutoShootCommand(shooter, hood, feeder, hopper, vision, "limelight", intakeArm));
 
         // Intake: Arm + Roller
         NamedCommands.registerCommand("intake",
-            new IntakeCommand(intakeArm, intakeRoller).withTimeout(3.0));
+                new IntakeCommand(intakeArm, intakeRoller).withTimeout(3.0));
 
         // Hopper calistir
         NamedCommands.registerCommand("hopperRun",
-            Commands.startEnd(() -> hopper.run(), () -> hopper.stop(), hopper).withTimeout(3.0));
+                Commands.startEnd(() -> hopper.run(), () -> hopper.stop(), hopper).withTimeout(3.0));
 
         // Hizalama (614 tarzi odometry+hub yonu bazli)
         NamedCommands.registerCommand("alignToTag",
-            new AlignToHubOdometry(drivetrain, vision).withTimeout(0.5));
+                new AlignToHubOdometry(drivetrain, vision).withTimeout(0.5));
 
         // Climb devre disi - motor sokuldu
         // NamedCommands.registerCommand("climbUp", ...);
@@ -191,18 +208,18 @@ public class RobotContainer {
 
         // FAZ 1: Sadece donus - tag'i ekranin ortasina getir (ileri/geri YOK)
         NamedCommands.registerCommand("alignToTowerRot",
-            new TowerRotateCommand(drivetrain, "limelight", MaxAngularRate)
-                .withTimeout(3.0));
+                new TowerRotateCommand(drivetrain, "limelight", MaxAngularRate)
+                        .withTimeout(3.0));
 
         // FAZ 2: Sadece duz ilerle - 0.5m mesafeye yaklas (donus YOK)
         NamedCommands.registerCommand("alignToTowerDrive",
-            new TowerDriveCommand(drivetrain, "limelight", MaxSpeed, 0.5)
-                .withTimeout(3.0));
+                new TowerDriveCommand(drivetrain, "limelight", MaxSpeed, 0.5)
+                        .withTimeout(3.0));
 
         // FAZ 2 alternatif: Yakin mesafe (0.35m)
         NamedCommands.registerCommand("alignToTowerDriveClose",
-            new TowerDriveCommand(drivetrain, "limelight", MaxSpeed, 0.35)
-                .withTimeout(3.0));
+                new TowerDriveCommand(drivetrain, "limelight", MaxSpeed, 0.35)
+                        .withTimeout(3.0));
 
         // ==============================================================
         // VISION DUZELTME - Path aralarinda odometry duzeltme
@@ -210,47 +227,47 @@ public class RobotContainer {
         // ==============================================================
         // Hizli duzeltme (0.15-0.5s) - cogu path arasi icin yeterli
         NamedCommands.registerCommand("visionCorrect",
-            new VisionCorrectCommand(drivetrain, vision, 0.15, 0.5));
+                new VisionCorrectCommand(drivetrain, vision, 0.15, 0.5));
 
         // Uzun duzeltme (0.2-0.8s) - onemli path'lerden once (atis, tower)
         NamedCommands.registerCommand("visionCorrectLong",
-            new VisionCorrectCommand(drivetrain, vision, 0.2, 0.8));
+                new VisionCorrectCommand(drivetrain, vision, 0.2, 0.8));
 
         // ==============================================================
         // INTAKE ROLLER - Path sirasinda top alma
         // PathPlanner'da deadline group ile path'e paralel calistir:
-        //   path bitince (hedefe ulasinca) roller durur
+        // path bitince (hedefe ulasinca) roller durur
         // ==============================================================
         NamedCommands.registerCommand("intakeRoller",
-            Commands.startEnd(
-                () -> {
-                    intakeRoller.run();
-                    hopper.run();
-                },
-                () -> {
-                    intakeRoller.stop();
-                    hopper.stop();
-                },
-                intakeRoller, hopper));
+                Commands.startEnd(
+                        () -> {
+                            intakeRoller.run();
+                            hopper.run();
+                        },
+                        () -> {
+                            intakeRoller.stop();
+                            hopper.stop();
+                        },
+                        intakeRoller, hopper));
 
         // Sadece roller (hopper'siz)
         NamedCommands.registerCommand("intakeRollerOnly",
-            Commands.startEnd(
-                () -> intakeRoller.run(),
-                () -> intakeRoller.stop(),
-                intakeRoller));
+                Commands.startEnd(
+                        () -> intakeRoller.run(),
+                        () -> intakeRoller.stop(),
+                        intakeRoller));
 
         // Intake BASLAT - sadece roller, hopper YOK
         NamedCommands.registerCommand("intakeStart",
-            Commands.runOnce(() -> {
-                intakeRoller.run();
-            }));
+                Commands.runOnce(() -> {
+                    intakeRoller.run();
+                }));
 
         // Intake DURDUR - sadece roller
         NamedCommands.registerCommand("intakeStop",
-            Commands.runOnce(() -> {
-                intakeRoller.stop();
-            }));
+                Commands.runOnce(() -> {
+                    intakeRoller.stop();
+                }));
 
         // Vision kontrol
         NamedCommands.registerCommand("visionOn", Commands.runOnce(() -> vision.setEnabled(true)));
@@ -259,36 +276,36 @@ public class RobotContainer {
         // Tumsek cikisi konum duzeltme - PathPlanner Event Marker ile tetiklenir
         NamedCommands.registerCommand("KonumDuzelt", Commands.runOnce(() -> vision.forceVisionUpdate()));
 
-        // Shooter onceden dondur - nzr_7 Event Marker ile tetikle, spin-up suresi kazandirir
+        // Shooter onceden dondur - nzr_7 Event Marker ile tetikle, spin-up suresi
+        // kazandirir
         NamedCommands.registerCommand("spinUp", Commands.runOnce(() -> {
             shooter.setRPM(3500);
         }));
 
         // Intake arm indir - otonom basinda kolu ac
         NamedCommands.registerCommand("intakeDown",
-            Commands.startEnd(
-                () -> intakeArm.setSpeed(-IntakeArmSubsystem.ARM_SPEED),
-                () -> intakeArm.stop(),
-                intakeArm).withTimeout(0.50));
+                Commands.startEnd(
+                        () -> intakeArm.setSpeed(-IntakeArmSubsystem.ARM_SPEED),
+                        () -> intakeArm.stop(),
+                        intakeArm).withTimeout(0.50));
 
         // Intake arm durdur
         NamedCommands.registerCommand("intakeArmStop",
-            Commands.runOnce(() -> intakeArm.stop()));
+                Commands.runOnce(() -> intakeArm.stop()));
 
         // Hub mesafe kontrolu — robot hub'a yeterince yakin degilse atislamasin
         // PathPlanner'da: alignToTag → shootIfClose seklinde kullan
         // Max 3m mesafeden atis yapar, daha uzaksa skip
         NamedCommands.registerCommand("shootIfClose",
-            Commands.either(
-                // Hub'a yakin → atis yap
-                new AutoShootCommand(shooter, hood, feeder, hopper, vision, "limelight", intakeArm),
-                // Hub'a uzak → sadece uyari, zaman kaybetme
-                Commands.runOnce(() -> {
-                    SmartDashboard.putString("Auto/Status", "SKIP:TooFar");
-                }),
-                // Kosul: hub mesafesi 3m'den az mi?
-                () -> vision.getDistanceToOwnHub() < 3.0
-            ));
+                Commands.either(
+                        // Hub'a yakin → atis yap
+                        new AutoShootCommand(shooter, hood, feeder, hopper, vision, "limelight", intakeArm),
+                        // Hub'a uzak → sadece uyari, zaman kaybetme
+                        Commands.runOnce(() -> {
+                            SmartDashboard.putString("Auto/Status", "SKIP:TooFar");
+                        }),
+                        // Kosul: hub mesafesi 3m'den az mi?
+                        () -> vision.getDistanceToOwnHub() < 3.0));
     }
 
     /*
@@ -296,31 +313,31 @@ public class RobotContainer {
      * XBOX CONTROLLER BUTON HARITASI - 2026 REBUILT
      * ========================================================================
      *
-     *  STICKS (SADECE SURUS):
-     *    Sol Stick       -> Swerve surme (field-centric X/Y)
-     *    Sag Stick X     -> Donus (rotation)
+     * STICKS (SADECE SURUS):
+     * Sol Stick -> Swerve surme (field-centric X/Y)
+     * Sag Stick X -> Donus (rotation)
      *
-     *  FACE BUTONLARI:
-     *    A (alt)         -> Hopper Manuel Ileri
-     *    B (sag)         -> Intake Arm Manuel asagi indir (Yedek)
-     *    X (sol)         -> Pas (shooter max hizla calissin)
-     *    Y (ust)         -> Hopper Manuel Geri (Sikisma)
+     * FACE BUTONLARI:
+     * A (alt) -> Hopper Manuel Ileri
+     * B (sag) -> Intake Arm Manuel asagi indir (Yedek)
+     * X (sol) -> Pas (shooter max hizla calissin)
+     * Y (ust) -> Hopper Manuel Geri (Sikisma)
      *
-     *  BUMPER / TRIGGER:
-     *    RB              -> Hub yonune donus hizalama (basili tut, Auto-Aim)
-     *    RT              -> ATIS! (Shooter+Feeder+Hood+Hopper)
-     *    LB              -> Turbo (basili tut = max hiz, basilmiyorken %60)
-     *    LT              -> FULL INTAKE (Kol asagi indir + Roller calistir)
+     * BUMPER / TRIGGER:
+     * RB -> Hub yonune donus hizalama (basili tut, Auto-Aim)
+     * RT -> ATIS! (Shooter+Feeder+Hood+Hopper)
+     * LB -> Turbo (basili tut = max hiz, basilmiyorken %60)
+     * LT -> FULL INTAKE (Kol asagi indir + Roller calistir)
      *
-     *  D-PAD (POV):
-     *    Up              -> Climb Yukari (Uzat)
-     *    Down            -> Climb Asagi (Cek/Asil)
-     *    Right           -> Intake yukari kaldirma
-     *    Left            -> Feeder ve shooter geri hareket etsin
+     * D-PAD (POV):
+     * Up -> Climb Yukari (Uzat)
+     * Down -> Climb Asagi (Cek/Asil)
+     * Right -> Intake yukari kaldirma
+     * Left -> Feeder ve shooter geri hareket etsin
      *
-     *  MENU:
-     *    Back            -> Field-centric sifirla (heading reset)
-     *    Start           -> Servo Test
+     * MENU:
+     * Back -> Field-centric sifirla (heading reset)
+     * Start -> Servo Test
      *
      * ========================================================================
      */
@@ -331,40 +348,40 @@ public class RobotContainer {
         // LB basili: max hiz, LB basilmiyorken: %60 hiz
         // ==================================================================
         drivetrain.setDefaultCommand(
-            drivetrain.applyRequest(() -> {
-                final double rawForward = -joystick.getLeftY();
-                final double rawLeft = -joystick.getLeftX();
-                final double rawRotation = -joystick.getRightX();
+                drivetrain.applyRequest(() -> {
+                    final double rawForward = -joystick.getLeftY();
+                    final double rawLeft = -joystick.getLeftX();
+                    final double rawRotation = -joystick.getRightX();
 
-                final double xySign = driveXYInverted ? -1.0 : 1.0;
-                final double shapedForward = xySign * shapeInput(rawForward);
-                final double shapedLeft = xySign * shapeInput(rawLeft);
-                final double shapedRotation = shapeInput(rawRotation);
+                    final double xySign = driveXYInverted ? -1.0 : 1.0;
+                    final double shapedForward = xySign * shapeInput(rawForward);
+                    final double shapedLeft = xySign * shapeInput(rawLeft);
+                    final double shapedRotation = shapeInput(rawRotation);
 
-                final double smoothedForward = xInputLimiter.calculate(shapedForward);
-                final double smoothedLeft = yInputLimiter.calculate(shapedLeft);
-                final double smoothedRotation = rotInputLimiter.calculate(shapedRotation);
+                    final double smoothedForward = xInputLimiter.calculate(shapedForward);
+                    final double smoothedLeft = yInputLimiter.calculate(shapedLeft);
+                    final double smoothedRotation = rotInputLimiter.calculate(shapedRotation);
 
-                // LB basili mi? Turbo mod (max hiz) : Normal mod (%50 hiz)
-                final double speedMultiplier = joystick.getHID().getLeftBumperButton() ? 1.0 : 0.50;
+                    // LB basili mi? Turbo mod (max hiz) : Normal mod (%50 hiz)
+                    final double speedMultiplier = joystick.getHID().getLeftBumperButton() ? 1.0 : 0.50;
 
-                return drive
-                    .withVelocityX(smoothedForward * MaxSpeed * speedMultiplier)
-                    .withVelocityY(smoothedLeft * MaxSpeed * speedMultiplier)
-                    .withRotationalRate(smoothedRotation * MaxAngularRate);
-            }));
+                    return drive
+                            .withVelocityX(smoothedForward * MaxSpeed * speedMultiplier)
+                            .withVelocityY(smoothedLeft * MaxSpeed * speedMultiplier)
+                            .withRotationalRate(smoothedRotation * MaxAngularRate);
+                }));
 
         RobotModeTriggers.disabled().whileTrue(
-            drivetrain.applyRequest(() -> new SwerveRequest.Idle()).ignoringDisable(true));
+                drivetrain.applyRequest(() -> new SwerveRequest.Idle()).ignoringDisable(true));
 
         // ==================================================================
         // RT (Sag Trigger) -> ATIS
-        //   Mesafe olc -> Shooter RPM + Hood aci ayarla
-        //   Shooter + Feeder + Hopper birlikte calisir
-        //   Intake arm'a DOKUNULMAZ, neredeyse orada kalir
+        // Mesafe olc -> Shooter RPM + Hood aci ayarla
+        // Shooter + Feeder + Hopper birlikte calisir
+        // Intake arm'a DOKUNULMAZ, neredeyse orada kalir
         // ==================================================================
         joystick.rightTrigger(0.5).whileTrue(
-            new ShootCommand(shooter, hood, feeder, hopper, vision, "limelight", intakeArm));
+                new ShootCommand(shooter, hood, feeder, hopper, vision, "limelight", intakeArm));
 
         // ==================================================================
         // RB -> Hub yonune donus hizalama (614 tarzi odometry bazli, basili tut)
@@ -372,112 +389,112 @@ public class RobotContainer {
         // AprilTag gorunmese bile calisir (vision seed yeterli).
         // ==================================================================
         joystick.rightBumper().whileTrue(
-            new AlignToHubOdometry(drivetrain, vision,
-                () -> {
-                    double sign = driveXYInverted ? -1.0 : 1.0;
-                    return sign * shapeInput(-joystick.getLeftY()) * MaxSpeed;
-                },
-                () -> {
-                    double sign = driveXYInverted ? -1.0 : 1.0;
-                    return sign * shapeInput(-joystick.getLeftX()) * MaxSpeed;
-                }));
+                new AlignToHubOdometry(drivetrain, vision,
+                        () -> {
+                            double sign = driveXYInverted ? -1.0 : 1.0;
+                            return sign * shapeInput(-joystick.getLeftY()) * MaxSpeed;
+                        },
+                        () -> {
+                            double sign = driveXYInverted ? -1.0 : 1.0;
+                            return sign * shapeInput(-joystick.getLeftX()) * MaxSpeed;
+                        }));
 
         // ==================================================================
         // A -> Hopper Manuel Ileri (basili tut = calistir)
         // ==================================================================
         joystick.a().whileTrue(
-            Commands.startEnd(() -> hopper.run(), () -> hopper.stop(), hopper));
+                Commands.startEnd(() -> hopper.run(), () -> hopper.stop(), hopper));
 
         // ==================================================================
         // B -> Intake Arm Manuel asagi indir (Yedek, basili tut = -0.25)
         // ==================================================================
         joystick.b().whileTrue(
-            Commands.startEnd(
-                () -> intakeArm.setSpeed(-IntakeArmSubsystem.ARM_SPEED),
-                () -> intakeArm.stop(),
-                intakeArm));
+                Commands.startEnd(
+                        () -> intakeArm.setSpeed(-IntakeArmSubsystem.ARM_SPEED),
+                        () -> intakeArm.stop(),
+                        intakeArm));
 
         // ==================================================================
         // LB -> TURBO: Surma hizi kontrolu swerve default command icinde
-        //       (basilmiyorken %60, basili tutuluyorken %100)
-        //       Burada ekstra binding yok, default command icinde halledildi
+        // (basilmiyorken %60, basili tutuluyorken %100)
+        // Burada ekstra binding yok, default command icinde halledildi
         // ==================================================================
 
         // ==================================================================
         // POV UP -> Climb Yukari (Uzat)
         // ==================================================================
         joystick.povUp().whileTrue(
-            new ClimbCommand(climb, ClimbCommand.Direction.UP));
+                new ClimbCommand(climb, ClimbCommand.Direction.UP));
 
         // ==================================================================
         // POV DOWN -> Climb Asagi (Cek/Asil)
         // ==================================================================
         joystick.povDown().whileTrue(
-            new ClimbCommand(climb, ClimbCommand.Direction.DOWN));
+                new ClimbCommand(climb, ClimbCommand.Direction.DOWN));
 
         // ==================================================================
         // POV RIGHT -> Intake yukari kaldirma (basili tut = +0.25)
         // ==================================================================
         joystick.povRight().whileTrue(
-            Commands.startEnd(
-                () -> intakeArm.setSpeed(IntakeArmSubsystem.ARM_SPEED),
-                () -> intakeArm.stop(),
-                intakeArm));
+                Commands.startEnd(
+                        () -> intakeArm.setSpeed(IntakeArmSubsystem.ARM_SPEED),
+                        () -> intakeArm.stop(),
+                        intakeArm));
 
         // ==================================================================
         // POV LEFT -> Feeder, Shooter ve IntakeRoller geri hareket etsin
         // ==================================================================
         joystick.povLeft().whileTrue(
-            Commands.startEnd(
-                () -> {
-                    shooter.setRPM(-1500);  // Shooter geri (negatif RPM)
-                    feeder.reverse();        // Feeder geri
-                    intakeRoller.reverse();  // IntakeRoller geri
-                },
-                () -> {
-                    shooter.stop();
-                    feeder.stop();
-                    intakeRoller.stop();
-                },
-                shooter, feeder, intakeRoller));
+                Commands.startEnd(
+                        () -> {
+                            shooter.setRPM(-1500); // Shooter geri (negatif RPM)
+                            feeder.reverse(); // Feeder geri
+                            intakeRoller.reverse(); // IntakeRoller geri
+                        },
+                        () -> {
+                            shooter.stop();
+                            feeder.stop();
+                            intakeRoller.stop();
+                        },
+                        shooter, feeder, intakeRoller));
 
         // ==================================================================
         // X -> Pas: Shooter max hizla calissin (basili tut)
         // ==================================================================
         joystick.x().whileTrue(
-            Commands.startEnd(
-                () -> shooter.setRPM(5040),  // Max shooter RPM
-                () -> shooter.stop(),
-                shooter));
+                Commands.startEnd(
+                        () -> shooter.setRPM(5040), // Max shooter RPM
+                        () -> shooter.stop(),
+                        shooter));
 
         // ==================================================================
         // Y -> Hopper Manuel Geri (Sikisma durumunda)
         // ==================================================================
         joystick.y().whileTrue(
-            Commands.startEnd(() -> hopper.reverse(), () -> hopper.stop(), hopper));
+                Commands.startEnd(() -> hopper.reverse(), () -> hopper.stop(), hopper));
 
         // ==================================================================
         // LT -> INTAKE: Sadece Roller calistir (Arm sabit kalir)
         // ==================================================================
         joystick.leftTrigger(0.5).whileTrue(
-            Commands.startEnd(
-                () -> intakeRoller.run(),
-                () -> intakeRoller.stop(),
-                intakeRoller));
+                Commands.startEnd(
+                        () -> intakeRoller.run(),
+                        () -> intakeRoller.stop(),
+                        intakeRoller));
 
         // ==================================================================
         // Start -> SERVO TEST (basili tut = MAX, birak = DEFAULT)
         // ==================================================================
         joystick.start().whileTrue(
-            Commands.startEnd(
-                () -> hood.setPosition(HoodSubsystem.MAX_POSITION),  // 0.77
-                () -> hood.setDefault(),                              // 0.5
-                hood));
+                Commands.startEnd(
+                        () -> hood.setPosition(HoodSubsystem.MAX_POSITION), // 0.77
+                        () -> hood.setDefault(), // 0.5
+                        hood));
 
         // ==================================================================
         // Back -> HEADING RESET (Pigeon sifirla)
-        //   Robotun su an baktigi yon = driver'a gore "ileri" olur.
-        //   Field-centric suruste "ileri" her zaman driver'dan uzaga gider.
+        // Robotun su an baktigi yon = driver'a gore "ileri" olur.
+        // Field-centric suruste "ileri" her zaman driver'dan uzaga gider.
         // ==================================================================
         joystick.back().onTrue(Commands.runOnce(() -> {
             // Robotun SU AN baktigi yon = "ileri" olarak ayarla
@@ -487,9 +504,8 @@ public class RobotContainer {
             // Pigeon heading'i de sifirla (robotun su anki yonu = 0°)
             Pose2d currentPose = drivetrain.getState().Pose;
             drivetrain.resetPose(new Pose2d(
-                currentPose.getTranslation(),
-                new Rotation2d(0)
-            ));
+                    currentPose.getTranslation(),
+                    new Rotation2d(0)));
 
             // Vision'i da resetle - tag gorurse yeniden dogru konum alsin
             vision.resetVisionSeed();
@@ -519,24 +535,50 @@ public class RobotContainer {
      */
     public Command getAutonomousCommand() {
         Command selected = autoChooser.getSelected();
-        if (selected == null) return Commands.print("Otonom secilmedi!");
+        if (selected == null)
+            return Commands.print("Otonom secilmedi!");
 
         return Commands.sequence(
-            new VisionAutoSeedCommand(drivetrain, vision, "limelight"),
-            selected.asProxy()
-        );
+                new VisionAutoSeedCommand(drivetrain, vision, "limelight"),
+                selected.asProxy());
     }
 
     // ========================================================================
     // GETTER'LAR
     // ========================================================================
-    public CommandSwerveDrivetrain getDrivetrain() { return drivetrain; }
-    public VisionSubsystem getVision() { return vision; }
-    public ShooterSubsystem getShooter() { return shooter; }
-    public HoodSubsystem getHood() { return hood; }
-    public FeederSubsystem getFeeder() { return feeder; }
-    public HopperSubsystem getHopper() { return hopper; }
-    public IntakeArmSubsystem getIntakeArm() { return intakeArm; }
-    public IntakeRollerSubsystem getIntakeRoller() { return intakeRoller; }
-    public ClimbSubsystem getClimb() { return climb; }
+    public CommandSwerveDrivetrain getDrivetrain() {
+        return drivetrain;
+    }
+
+    public VisionSubsystem getVision() {
+        return vision;
+    }
+
+    public ShooterSubsystem getShooter() {
+        return shooter;
+    }
+
+    public HoodSubsystem getHood() {
+        return hood;
+    }
+
+    public FeederSubsystem getFeeder() {
+        return feeder;
+    }
+
+    public HopperSubsystem getHopper() {
+        return hopper;
+    }
+
+    public IntakeArmSubsystem getIntakeArm() {
+        return intakeArm;
+    }
+
+    public IntakeRollerSubsystem getIntakeRoller() {
+        return intakeRoller;
+    }
+
+    public ClimbSubsystem getClimb() {
+        return climb;
+    }
 }
