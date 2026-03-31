@@ -1,13 +1,10 @@
 package frc.robot.commands.auto;
 
-import java.util.Set;
-
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -18,13 +15,8 @@ import frc.robot.subsystems.CommandSwerveDrivetrain;
 
 /**
  * ============================================================================
- * AUTO ALIGN TO TAG COMMAND — ALLIANCE BAZLI FILTRELEME + HASSAS HIZALAMA
+ * AUTO ALIGN TO TAG COMMAND — HASSAS HIZALAMA
  * ============================================================================
- *
- * ALLIANCE FILTRELEME:
- *   - Blue Alliance: Sadece 24, 26, 27 numarali taglere hizalanir
- *   - Red Alliance: Sadece 8, 10, 11 numarali taglere hizalanir
- *   - Diger taglar IGNORED edilir
  *
  * HIZALAMA MANTIGI:
  *   - txnc degeri kullanilarak merkez hizalama (hedef = 0)
@@ -43,12 +35,6 @@ public class AutoAlignToTagCommand extends Command {
     private final double desiredDistanceMeters;
     private final double xScale;
     private final double rotScale;
-
-    // ========================================================================
-    // ALLIANCE BAZLI TAG FILTRELEME
-    // ========================================================================
-    private static final Set<Integer> BLUE_ALLOWED_TAGS = Set.of(24, 26, 27);
-    private static final Set<Integer> RED_ALLOWED_TAGS = Set.of(8, 10, 11);
 
     // PID ayarlari - txnc tabanli (daha hassas)
     private static final double ROT_KP = 4.0;   // txnc * kP = rad/s
@@ -124,18 +110,6 @@ public class AutoAlignToTagCommand extends Command {
         addRequirements(drivetrain);
     }
 
-    private Set<Integer> getAllowedTags() {
-        var alliance = DriverStation.getAlliance();
-        if (alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red) {
-            return RED_ALLOWED_TAGS;
-        }
-        return BLUE_ALLOWED_TAGS;
-    }
-
-    private boolean isTagAllowed(int tagId) {
-        return getAllowedTags().contains(tagId);
-    }
-
     @Override
     public void initialize() {
         LimelightHelpers.setLEDMode_ForceOn(limelightName);
@@ -158,7 +132,7 @@ public class AutoAlignToTagCommand extends Command {
         lastTxnc = 0;
 
         SmartDashboard.putString("AutoAlign/Status", "Aligning...");
-        SmartDashboard.putString("AutoAlign/AllowedTags", getAllowedTags().toString());
+        SmartDashboard.putString("AutoAlign/AllowedTags", "ALL");
     }
 
     @Override
@@ -179,9 +153,6 @@ public class AutoAlignToTagCommand extends Command {
                 double nearestDist = Double.MAX_VALUE;
 
                 for (RawFiducial fid : fiducials) {
-                    if (!isTagAllowed(fid.id)) {
-                        continue;
-                    }
                     if (fid.distToCamera < nearestDist) {
                         nearestDist = fid.distToCamera;
                         nearest = fid;

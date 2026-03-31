@@ -5,15 +5,15 @@
     "data": {
       "commands": [
         {
-          "type": "path",
+          "type": "named",
           "data": {
-            "pathName": "nzr_2"
+            "name": "intakeDown"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "nzr_3"
+            "pathName": "natural_zone_center_left"
           }
         },
         {
@@ -25,7 +25,25 @@
         {
           "type": "path",
           "data": {
-            "pathName": "nzr_4"
+            "pathName": "nz_2"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "nz_3"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "visionCorrect"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "nz_4"
           }
         },
         {
@@ -37,43 +55,37 @@
         {
           "type": "path",
           "data": {
-            "pathName": "nzr_5"
+            "pathName": "nz_5"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "nzr_6"
+            "pathName": "nz_6"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "nz_7"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "nz_8"
           }
         },
         {
           "type": "named",
           "data": {
             "name": "visionCorrect"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "nzr_7"
           }
         },
         {
           "type": "named",
           "data": {
             "name": "intakeStop"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "nzr_8"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "visionCorrect"
           }
         },
         {

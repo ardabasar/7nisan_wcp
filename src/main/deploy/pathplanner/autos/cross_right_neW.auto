@@ -5,15 +5,15 @@
     "data": {
       "commands": [
         {
-          "type": "path",
+          "type": "named",
           "data": {
-            "pathName": "natural_zone_center_right"
+            "name": "intakeDown"
           }
         },
         {
-          "type": "named",
+          "type": "path",
           "data": {
-            "name": "visionCorrect"
+            "pathName": "natural_zone_center_right"
           }
         },
         {
@@ -35,6 +35,12 @@
           }
         },
         {
+          "type": "path",
+          "data": {
+            "pathName": "nzr_4"
+          }
+        },
+        {
           "type": "named",
           "data": {
             "name": "intakeStart"
@@ -43,19 +49,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "nzr_4"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
             "pathName": "nzr_5"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "intakeStop"
           }
         },
         {
@@ -77,9 +71,21 @@
           }
         },
         {
+          "type": "named",
+          "data": {
+            "name": "intakeStop"
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "nzr_8"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "visionCorrect"
           }
         },
         {
@@ -91,7 +97,7 @@
         {
           "type": "named",
           "data": {
-            "name": "shoot"
+            "name": "autoShoot"
           }
         }
       ]

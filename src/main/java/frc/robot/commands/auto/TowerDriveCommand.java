@@ -1,12 +1,9 @@
 package frc.robot.commands.auto;
 
-import java.util.Set;
-
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.SlewRateLimiter;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -24,10 +21,6 @@ import frc.robot.subsystems.CommandSwerveDrivetrain;
  * Tag'e olan mesafeyi olcerek belirtilen mesafeye ulasinca biter.
  * TowerRotateCommand'dan SONRA calistirilmali (tag zaten ortalanmis olmali).
  *
- * ALLIANCE FILTRELEME:
- *   - Red Alliance:  Tag 15 (Red Tower Alt-1, 180° bakiyor)
- *   - Blue Alliance: Tag 31 (Blue Tower Ust-1, 0° bakiyor)
- *
  * KULLANIM (PathPlanner):
  *   path -> alignToTowerRot -> alignToTowerDrive -> climbUp
  * ============================================================================
@@ -38,12 +31,6 @@ public class TowerDriveCommand extends Command {
     private final String limelightName;
     private final double maxSpeed;
     private final double desiredDistanceMeters;
-
-    // ========================================================================
-    // TOWER TAG FILTRELEME
-    // ========================================================================
-    private static final Set<Integer> RED_TOWER_TAGS = Set.of(15);
-    private static final Set<Integer> BLUE_TOWER_TAGS = Set.of(31);
 
     // ========================================================================
     // MESAFE PID
@@ -95,18 +82,6 @@ public class TowerDriveCommand extends Command {
         addRequirements(drivetrain);
     }
 
-    private Set<Integer> getAllowedTags() {
-        var alliance = DriverStation.getAlliance();
-        if (alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red) {
-            return RED_TOWER_TAGS;
-        }
-        return BLUE_TOWER_TAGS;
-    }
-
-    private boolean isTagAllowed(int tagId) {
-        return getAllowedTags().contains(tagId);
-    }
-
     @Override
     public void initialize() {
         xLimiter.reset(0);
@@ -145,7 +120,6 @@ public class TowerDriveCommand extends Command {
                 double bestDist = Double.MAX_VALUE;
 
                 for (RawFiducial fid : fiducials) {
-                    if (!isTagAllowed(fid.id)) continue;
                     if (fid.distToCamera < bestDist) {
                         bestDist = fid.distToCamera;
                         best = fid;

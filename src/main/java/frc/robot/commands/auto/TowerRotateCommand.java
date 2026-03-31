@@ -1,12 +1,9 @@
 package frc.robot.commands.auto;
 
-import java.util.Set;
-
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.SlewRateLimiter;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -23,10 +20,6 @@ import frc.robot.subsystems.CommandSwerveDrivetrain;
  * Robot yerinde durur, sadece donerek tower tag'ini ekranin ortasina getirir.
  * Ileri/geri hareket YOKTUR. txnc = 0 olunca settle suresinden sonra biter.
  *
- * ALLIANCE FILTRELEME:
- *   - Red Alliance:  Tag 15 (Red Tower Alt-1, 180° bakiyor)
- *   - Blue Alliance: Tag 31 (Blue Tower Ust-1, 0° bakiyor)
- *
  * KULLANIM (PathPlanner):
  *   path -> alignToTowerRot -> alignToTowerDrive -> climbUp
  * ============================================================================
@@ -36,12 +29,6 @@ public class TowerRotateCommand extends Command {
     private final CommandSwerveDrivetrain drivetrain;
     private final String limelightName;
     private final double maxAngularRate;
-
-    // ========================================================================
-    // TOWER TAG FILTRELEME
-    // ========================================================================
-    private static final Set<Integer> RED_TOWER_TAGS = Set.of(15);
-    private static final Set<Integer> BLUE_TOWER_TAGS = Set.of(31);
 
     // ========================================================================
     // ROTATION PID
@@ -89,18 +76,6 @@ public class TowerRotateCommand extends Command {
         addRequirements(drivetrain);
     }
 
-    private Set<Integer> getAllowedTags() {
-        var alliance = DriverStation.getAlliance();
-        if (alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red) {
-            return RED_TOWER_TAGS;
-        }
-        return BLUE_TOWER_TAGS;
-    }
-
-    private boolean isTagAllowed(int tagId) {
-        return getAllowedTags().contains(tagId);
-    }
-
     @Override
     public void initialize() {
         LimelightHelpers.setLEDMode_ForceOn(limelightName);
@@ -118,7 +93,7 @@ public class TowerRotateCommand extends Command {
         lastTxnc = 0;
 
         SmartDashboard.putString("TowerRot/Status", "Starting...");
-        SmartDashboard.putString("TowerRot/AllowedTags", getAllowedTags().toString());
+        SmartDashboard.putString("TowerRot/AllowedTags", "ALL");
     }
 
     @Override
@@ -140,7 +115,6 @@ public class TowerRotateCommand extends Command {
                 double bestDist = Double.MAX_VALUE;
 
                 for (RawFiducial fid : fiducials) {
-                    if (!isTagAllowed(fid.id)) continue;
                     if (fid.distToCamera < bestDist) {
                         bestDist = fid.distToCamera;
                         best = fid;
