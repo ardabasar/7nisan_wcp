@@ -3,12 +3,10 @@
   "robotLength": 0.762,
   "holonomicMode": true,
   "pathFolders": [
-    "natural_zone_right",
-    "center_human_climb",
-    "human_climb",
     "human_shooter",
     "left_balls",
-    "natural_zone_left"
+    "natural_zone_left",
+    "natural_zone_right"
   ],
   "autoFolders": [],
   "defaultMaxVel": 3.5,
@@ -16,7 +14,7 @@
   "defaultMaxAngVel": 540.0,
   "defaultMaxAngAccel": 720.0,
   "defaultNominalVoltage": 12.0,
-  "robotMass": 46.0,
+  "robotMass": 52.0,
   "robotMOI": 6.883,
   "robotTrackwidth": 0.5588,
   "driveWheelRadius": 0.05,

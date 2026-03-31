@@ -6,7 +6,9 @@ package frc.robot;
 
 import com.ctre.phoenix6.HootAutoReplay;
 
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
@@ -71,13 +73,36 @@ public class Robot extends TimedRobot {
         Elastic.warmUp();
     }
 
+    // Mac timer throttle
+    private int timerLoopCount = 0;
+
     @Override
     public void robotPeriodic() {
         m_timeAndJoystickReplay.update();
         CommandScheduler.getInstance().run();
-        // Vision fuzyonu artik VisionSubsystem.periodic() icinde yapiliyor.
-        // VisionSubsystem varsayilan olarak ACIK basliyor, robot nerede
-        // oldugunu hemen bilir.
+
+        // ================================================================
+        // MAC TIMER - Elastic Dashboard
+        // Otonom: 20s, Teleop: 2:10 (130s), Toplam: 2:30
+        // ================================================================
+        timerLoopCount++;
+        if (timerLoopCount % 10 == 0) {
+            double matchTime = DriverStation.getMatchTime();
+            if (matchTime >= 0) {
+                int minutes = (int) (matchTime / 60);
+                int seconds = (int) (matchTime % 60);
+                SmartDashboard.putString("Match/Timer", String.format("%d:%02d", minutes, seconds));
+                SmartDashboard.putNumber("Match/Seconds", matchTime);
+
+                if (DriverStation.isAutonomousEnabled()) {
+                    SmartDashboard.putString("Match/Period", "OTONOM");
+                } else if (DriverStation.isTeleopEnabled()) {
+                    SmartDashboard.putString("Match/Period", "TELEOP");
+                } else {
+                    SmartDashboard.putString("Match/Period", "DISABLED");
+                }
+            }
+        }
     }
 
     @Override
@@ -116,6 +141,13 @@ public class Robot extends TimedRobot {
         // Otonom bitince HER SEYI temizle
         CommandScheduler.getInstance().cancelAll();
         m_autonomousCommand = null;
+
+        // Subsystem requirement'siz komutlar motorlari acik birakabilir — hepsini durdur
+        m_robotContainer.getIntakeRoller().stop();
+        m_robotContainer.getIntakeArm().stop();
+        m_robotContainer.getShooter().stop();
+        m_robotContainer.getFeeder().stop();
+        m_robotContainer.getHopper().stop();
     }
 
     @Override

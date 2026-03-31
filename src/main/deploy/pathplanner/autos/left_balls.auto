@@ -5,15 +5,9 @@
     "data": {
       "commands": [
         {
-          "type": "path",
+          "type": "named",
           "data": {
-            "pathName": "hc_1"
-          }
-        },
-        {
-          "type": "wait",
-          "data": {
-            "waitTime": 2.0
+            "name": "intakeDown"
           }
         },
         {
@@ -25,7 +19,49 @@
         {
           "type": "path",
           "data": {
-            "pathName": "hc_2"
+            "pathName": "lb_1"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "lb_2"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "intakeStart"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "lb_3"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "lb_4"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "lb_5"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "intakeStop"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "lb_6"
           }
         },
         {
@@ -43,25 +79,7 @@
         {
           "type": "named",
           "data": {
-            "name": "shoot"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "hc_3"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "hc_4"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "hc_5"
+            "name": "autoShoot"
           }
         }
       ]

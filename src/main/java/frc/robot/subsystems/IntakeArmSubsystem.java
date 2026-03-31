@@ -85,7 +85,7 @@ public class IntakeArmSubsystem extends SubsystemBase {
         config.CurrentLimits.StatorCurrentLimitEnable = true;
         config.CurrentLimits.StatorCurrentLimit = 120.0;
         config.CurrentLimits.SupplyCurrentLimitEnable = true;
-        config.CurrentLimits.SupplyCurrentLimit = 38.0;
+        config.CurrentLimits.SupplyCurrentLimit = 40.0;
         motor.getConfigurator().apply(config);
     }
 

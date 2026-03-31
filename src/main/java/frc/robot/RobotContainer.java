@@ -45,6 +45,7 @@ import frc.robot.subsystems.IntakeArmSubsystem;
 import frc.robot.subsystems.IntakeRollerSubsystem;
 
 import frc.robot.subsystems.ClimbSubsystem;
+import frc.robot.subsystems.LEDSubsystem;
 import frc.robot.subsystems.VisionSubsystem;
 
 /**
@@ -122,7 +123,8 @@ public class RobotContainer {
     private final HopperSubsystem hopper         = new HopperSubsystem();
     private final IntakeArmSubsystem intakeArm   = new IntakeArmSubsystem();
     private final IntakeRollerSubsystem intakeRoller = new IntakeRollerSubsystem();
-    private final ClimbSubsystem climb           = new ClimbSubsystem();
+    // private final ClimbSubsystem climb           = new ClimbSubsystem(); // MOTOR SOKULDU - devre disi
+    private final LEDSubsystem leds             = new LEDSubsystem();
 
     // ========================================================================
     // OTONOM
@@ -176,13 +178,9 @@ public class RobotContainer {
         NamedCommands.registerCommand("alignToTag",
             new AlignToHubOdometry(drivetrain, vision).withTimeout(0.5));
 
-        // Climb yukari (mekanizmayi uzat) - 3 saniye
-        NamedCommands.registerCommand("climbUp",
-            new ClimbCommand(climb, ClimbCommand.Direction.UP).withTimeout(2.0));
-
-        // Climb asagi (robotu as) - 3 saniye
-        NamedCommands.registerCommand("climbDown",
-            new ClimbCommand(climb, ClimbCommand.Direction.DOWN).withTimeout(3.0));
+        // Climb devre disi - motor sokuldu
+        // NamedCommands.registerCommand("climbUp", ...);
+        // NamedCommands.registerCommand("climbDown", ...);
 
         // ==============================================================
         // TOWER HIZALAMA - Asilma icin (Tag 15 Red / Tag 31 Blue)
@@ -264,6 +262,32 @@ public class RobotContainer {
         NamedCommands.registerCommand("spinUp", Commands.runOnce(() -> {
             shooter.setRPM(3500);
         }));
+
+        // Intake arm indir - otonom basinda kolu ac
+        NamedCommands.registerCommand("intakeDown",
+            Commands.startEnd(
+                () -> intakeArm.setSpeed(-IntakeArmSubsystem.ARM_SPEED),
+                () -> intakeArm.stop(),
+                intakeArm).withTimeout(0.50));
+
+        // Intake arm durdur
+        NamedCommands.registerCommand("intakeArmStop",
+            Commands.runOnce(() -> intakeArm.stop()));
+
+        // Hub mesafe kontrolu — robot hub'a yeterince yakin degilse atislamasin
+        // PathPlanner'da: alignToTag → shootIfClose seklinde kullan
+        // Max 3m mesafeden atis yapar, daha uzaksa skip
+        NamedCommands.registerCommand("shootIfClose",
+            Commands.either(
+                // Hub'a yakin → atis yap
+                new AutoShootCommand(shooter, hood, feeder, hopper, vision, "limelight", intakeArm),
+                // Hub'a uzak → sadece uyari, zaman kaybetme
+                Commands.runOnce(() -> {
+                    SmartDashboard.putString("Auto/Status", "SKIP:TooFar");
+                }),
+                // Kosul: hub mesafesi 3m'den az mi?
+                () -> vision.getDistanceToOwnHub() < 3.0
+            ));
     }
 
     /*
@@ -379,16 +403,16 @@ public class RobotContainer {
         // ==================================================================
 
         // ==================================================================
-        // POV UP -> Climb Yukari (Uzat)
+        // POV UP -> Climb Yukari (Uzat) — MOTOR SOKULDU, DEVRE DISI
         // ==================================================================
-        joystick.povUp().whileTrue(
-            new ClimbCommand(climb, ClimbCommand.Direction.UP));
+        // joystick.povUp().whileTrue(
+        //     new ClimbCommand(climb, ClimbCommand.Direction.UP));
 
         // ==================================================================
-        // POV DOWN -> Climb Asagi (Cek/Asil)
+        // POV DOWN -> Climb Asagi (Cek/Asil) — MOTOR SOKULDU, DEVRE DISI
         // ==================================================================
-        joystick.povDown().whileTrue(
-            new ClimbCommand(climb, ClimbCommand.Direction.DOWN));
+        // joystick.povDown().whileTrue(
+        //     new ClimbCommand(climb, ClimbCommand.Direction.DOWN));
 
         // ==================================================================
         // POV RIGHT -> Intake yukari kaldirma (basili tut = +0.25)
@@ -509,5 +533,5 @@ public class RobotContainer {
     public HopperSubsystem getHopper() { return hopper; }
     public IntakeArmSubsystem getIntakeArm() { return intakeArm; }
     public IntakeRollerSubsystem getIntakeRoller() { return intakeRoller; }
-    public ClimbSubsystem getClimb() { return climb; }
+    // public ClimbSubsystem getClimb() { return climb; } // MOTOR SOKULDU
 }
