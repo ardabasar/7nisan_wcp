@@ -144,16 +144,16 @@ public class VisionSubsystem extends SubsystemBase {
 
     // ========================================================================
     // 2026 REBUILT SAHA KOORDINATLARI (metre cinsinden)
-    // Kaynak: WPILib 2026.2.1 - 2026-rebuilt-welded.json
+    // Kaynak: 2026-rebuilt-andymark.json (Turkiye sahasi - Andymark)
     // Koordinat Sistemi: Blue alliance duvarinin sag alt kosesi (0,0)
     //   +X -> Red alliance yonune dogru
     //   +Y -> Scoring table (seyirci) yonune dogru
-    // Saha boyutu: 16.541m x 8.069m
+    // Saha boyutu: 16.518m x 8.043m
     // ========================================================================
 
     // --- Saha boyutlari ---
-    private static final double FIELD_LENGTH = 16.541; // metre
-    private static final double FIELD_WIDTH  = 8.069;  // metre
+    private static final double FIELD_LENGTH = 16.518; // metre (andymark json)
+    private static final double FIELD_WIDTH  = 8.043;  // metre (andymark json)
 
     // --- AprilTag Pozisyonlari (ID -> X,Y metre) ---
     // Resmi saha verileri (2026-rebuilt-andymark.json)
