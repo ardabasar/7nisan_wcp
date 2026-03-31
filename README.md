@@ -90,3 +90,5 @@ distanceToShotMap.put(Inches.of(220.0), new Shot(4050, 0.59));
 distanceToShotMap.put(Inches.of(235.0), new Shot(4150, 0.62));
 
 distanceToShotMap.put(Inches.of(242.0), new Shot(4200, 0.64));  // Human side'e yakin ust limit
+
+

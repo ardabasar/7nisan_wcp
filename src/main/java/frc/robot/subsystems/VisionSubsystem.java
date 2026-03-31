@@ -356,6 +356,14 @@ public class VisionSubsystem extends SubsystemBase {
         return enabled;
     }
 
+    /** Vision seed'i sifirla - sonraki tag gorunce yeniden resetPose yapar */
+    public void resetVisionSeed() {
+        visionSeeded = false;
+        lastAcceptedPose = null;
+        lastAcceptedTimestampSeconds = -1.0;
+        SmartDashboard.putString("Vision/Status", "SEED RESET - bekleniyor...");
+    }
+
     /** Hizalama aktifken true yap → resetPose devre disi, sadece soft fusion */
     public void setAlignmentActive(boolean active) {
         this.alignmentActive = active;
@@ -568,9 +576,13 @@ public class VisionSubsystem extends SubsystemBase {
         // ==================================================================
 
         // 1) ILK SEED - Sadece 1 kez, sonra bir daha resetPose YOK
+        //    ONEMLI: MegaTag1 tercih et! MegaTag2 gyro'ya bagimli,
+        //    capraz baslatmada gyro yanlis → MegaTag2 XY de yanlis olur.
+        //    MegaTag1 heading'i kendi hesaplar (gyro'dan bagimsiz).
         if (!visionSeeded) {
             Pose2d seedPose;
-            if (mt1Estimate != null && mt1Estimate.tagCount >= 2) {
+            if (mt1Estimate != null && mt1Estimate.tagCount >= 1 && mt1Estimate.pose != null) {
+                // MegaTag1 HER ZAMAN tercih (gyro'dan bagimsiz heading)
                 seedPose = mt1Estimate.pose;
             } else {
                 seedPose = estimate.pose;
@@ -636,6 +648,11 @@ public class VisionSubsystem extends SubsystemBase {
         // Robot yavas + fark buyuk → vision'a cok guven (odometry kaydi)
         if (linearSpeedMps < 0.5 && poseDiffMeters > 0.10) {
             xyStdDev = 0.01;  // Neredeyse tam guven
+        }
+        // Robot TAMAMEN duruyorsa → vision'a MAKSIMUM guven
+        // Capraz baslatma, disabled mod, sahaya yerlestirme vs.
+        if (linearSpeedMps < 0.05 && poseDiffMeters > 0.30) {
+            xyStdDev = 0.005;  // Tam guven - robot duruyorsa vision dogrudur
         }
 
         // 5) VISION FUZYONU — disabled/enabled FARK ETMEZ

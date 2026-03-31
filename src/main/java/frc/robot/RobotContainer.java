@@ -16,6 +16,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.cscore.HttpCamera;
 import edu.wpi.first.cscore.HttpCamera.HttpCameraKind;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -123,7 +124,7 @@ public class RobotContainer {
     private final HopperSubsystem hopper         = new HopperSubsystem();
     private final IntakeArmSubsystem intakeArm   = new IntakeArmSubsystem();
     private final IntakeRollerSubsystem intakeRoller = new IntakeRollerSubsystem();
-    // private final ClimbSubsystem climb           = new ClimbSubsystem(); // MOTOR SOKULDU - devre disi
+    private final ClimbSubsystem climb           = new ClimbSubsystem();
     private final LEDSubsystem leds             = new LEDSubsystem();
 
     // ========================================================================
@@ -403,16 +404,16 @@ public class RobotContainer {
         // ==================================================================
 
         // ==================================================================
-        // POV UP -> Climb Yukari (Uzat) — MOTOR SOKULDU, DEVRE DISI
+        // POV UP -> Climb Yukari (Uzat)
         // ==================================================================
-        // joystick.povUp().whileTrue(
-        //     new ClimbCommand(climb, ClimbCommand.Direction.UP));
+        joystick.povUp().whileTrue(
+            new ClimbCommand(climb, ClimbCommand.Direction.UP));
 
         // ==================================================================
-        // POV DOWN -> Climb Asagi (Cek/Asil) — MOTOR SOKULDU, DEVRE DISI
+        // POV DOWN -> Climb Asagi (Cek/Asil)
         // ==================================================================
-        // joystick.povDown().whileTrue(
-        //     new ClimbCommand(climb, ClimbCommand.Direction.DOWN));
+        joystick.povDown().whileTrue(
+            new ClimbCommand(climb, ClimbCommand.Direction.DOWN));
 
         // ==================================================================
         // POV RIGHT -> Intake yukari kaldirma (basili tut = +0.25)
@@ -479,18 +480,22 @@ public class RobotContainer {
         //   Field-centric suruste "ileri" her zaman driver'dan uzaga gider.
         // ==================================================================
         joystick.back().onTrue(Commands.runOnce(() -> {
-            // Field-centric referansi sifirla
+            // Robotun SU AN baktigi yon = "ileri" olarak ayarla
+            // Bu CTRE'nin operator perspective'ini kullanir - en dogru yontem
             drivetrain.seedFieldCentric();
-            // Odometry heading'i de sifirla (robotun su anki yonu = 0°)
-            // XY'yi koru, sadece heading'i duzelt
+
+            // Pigeon heading'i de sifirla (robotun su anki yonu = 0°)
             Pose2d currentPose = drivetrain.getState().Pose;
             drivetrain.resetPose(new Pose2d(
                 currentPose.getTranslation(),
                 new Rotation2d(0)
             ));
+
+            // Vision'i da resetle - tag gorurse yeniden dogru konum alsin
+            vision.resetVisionSeed();
             xInputLimiter.reset(0);
             yInputLimiter.reset(0);
-            SmartDashboard.putString("Drive/Status", "HEADING RESET!");
+            SmartDashboard.putString("Drive/Status", "GYRO + VISION RESET!");
         }));
 
         // ==================================================================
@@ -533,5 +538,5 @@ public class RobotContainer {
     public HopperSubsystem getHopper() { return hopper; }
     public IntakeArmSubsystem getIntakeArm() { return intakeArm; }
     public IntakeRollerSubsystem getIntakeRoller() { return intakeRoller; }
-    // public ClimbSubsystem getClimb() { return climb; } // MOTOR SOKULDU
+    public ClimbSubsystem getClimb() { return climb; }
 }

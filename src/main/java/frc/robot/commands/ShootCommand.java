@@ -32,7 +32,9 @@ import frc.robot.subsystems.VisionSubsystem;
  * 6) Birakinca hepsi durur, hood default'a doner
  */
 public class ShootCommand extends Command {
-    private static final double kShooterRpmScale = 1.06;
+    // Sert top: 1.25 yetiyordu, yumusak top daha hafif → daha kisa gider
+    // Yumusak top icin daha yuksek RPM gerekli
+    private static final double kShooterRpmScale = 1.35;
     private static final double kShooterReadyToleranceRPM = 150.0;
     private static final int kShooterReadyCyclesRequired = 3;
     private static final double kMinFeedDelaySeconds = 0.10;
