@@ -106,7 +106,7 @@ public class RobotContainer {
     // ========================================================================
     // SWERVE SABITLERI
     // ========================================================================
-    private final double MaxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
+    private final double MaxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond) * 0.50;
     private final double MaxAngularRate = RotationsPerSecond.of(1).in(RadiansPerSecond);
     private static final double JOYSTICK_DEADBAND = 0.15;
     private static final double INPUT_CURVE_EXPONENT = 1.5;
@@ -320,14 +320,14 @@ public class RobotContainer {
      * FACE BUTONLARI:
      * A (alt) -> Hopper Manuel Ileri
      * B (sag) -> Intake Arm Manuel asagi indir (Yedek)
-     * X (sol) -> Pas (shooter max hizla calissin)
+     * X (sol) -> Shooter spin-up (sadece shooter dondur)
      * Y (ust) -> Hopper Manuel Geri (Sikisma)
      *
      * BUMPER / TRIGGER:
      * RB -> Hub yonune donus hizalama (basili tut, Auto-Aim)
      * RT -> ATIS! (Shooter+Feeder+Hood+Hopper)
-     * LB -> Turbo (basili tut = max hiz, basilmiyorken %60)
-     * LT -> FULL INTAKE (Kol asagi indir + Roller calistir)
+     * LB -> PAS (Intake+Hopper+Feeder+Shooter hepsi birden, basili tut)
+     * LT -> FULL INTAKE (Roller calistir)
      *
      * D-PAD (POV):
      * Up -> Climb Yukari (Uzat)
@@ -344,8 +344,7 @@ public class RobotContainer {
     private void configureBindings() {
 
         // ==================================================================
-        // SWERVE SURME (varsayilan komut - LB turbo mantigi ile)
-        // LB basili: max hiz, LB basilmiyorken: %60 hiz
+        // SWERVE SURME (sabit %50 max hiz)
         // ==================================================================
         drivetrain.setDefaultCommand(
                 drivetrain.applyRequest(() -> {
@@ -362,12 +361,9 @@ public class RobotContainer {
                     final double smoothedLeft = yInputLimiter.calculate(shapedLeft);
                     final double smoothedRotation = rotInputLimiter.calculate(shapedRotation);
 
-                    // LB basili mi? Turbo mod (max hiz) : Normal mod (%50 hiz)
-                    final double speedMultiplier = joystick.getHID().getLeftBumperButton() ? 1.0 : 0.50;
-
                     return drive
-                            .withVelocityX(smoothedForward * MaxSpeed * speedMultiplier)
-                            .withVelocityY(smoothedLeft * MaxSpeed * speedMultiplier)
+                            .withVelocityX(smoothedForward * MaxSpeed)
+                            .withVelocityY(smoothedLeft * MaxSpeed)
                             .withRotationalRate(smoothedRotation * MaxAngularRate);
                 }));
 
@@ -415,10 +411,27 @@ public class RobotContainer {
                         intakeArm));
 
         // ==================================================================
-        // LB -> TURBO: Surma hizi kontrolu swerve default command icinde
-        // (basilmiyorken %60, basili tutuluyorken %100)
-        // Burada ekstra binding yok, default command icinde halledildi
+        // LB -> PAS: Ortadan kendi tarafa top firlatma (~4-5m)
+        // Sabit RPM 2000 + Hood 0.15 + Intake + Feeder + Hopper
+        // Basili tut: alir almaz firlatir, surus etkilenmez
         // ==================================================================
+        joystick.leftBumper().whileTrue(
+                Commands.startEnd(
+                        () -> {
+                            shooter.setRPM(2000);
+                            hood.setPosition(0.15);
+                            intakeRoller.run();
+                            hopper.run();
+                            feeder.feed();
+                        },
+                        () -> {
+                            shooter.stop();
+                            hood.setDefault();
+                            intakeRoller.stop();
+                            hopper.stop();
+                            feeder.stop();
+                        },
+                        shooter, hood, intakeRoller, hopper, feeder));
 
         // ==================================================================
         // POV UP -> Climb Yukari (Uzat)
@@ -459,7 +472,7 @@ public class RobotContainer {
                         shooter, feeder, intakeRoller));
 
         // ==================================================================
-        // X -> Pas: Shooter max hizla calissin (basili tut)
+        // X -> Shooter spin-up (sadece shooter dondur, basili tut)
         // ==================================================================
         joystick.x().whileTrue(
                 Commands.startEnd(
