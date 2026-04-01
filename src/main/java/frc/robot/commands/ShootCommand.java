@@ -70,20 +70,21 @@ public class ShootCommand extends Command {
                             .interpolate(startValue.hoodPosition, endValue.hoodPosition, t)));
 
     static {
-        distanceToShotMap.put(Inches.of(36.0), new Shot(2880, 0.12)); // Hub dibinden atis
-        distanceToShotMap.put(Inches.of(52.0), new Shot(3360, 0.19)); // En yakin
-        distanceToShotMap.put(Inches.of(72.0), new Shot(3540, 0.25)); // Yakin-orta
-        distanceToShotMap.put(Inches.of(92.0), new Shot(3720, 0.31)); // Orta-yakin
-        distanceToShotMap.put(Inches.of(114.4), new Shot(3930, 0.40)); // Orta (WCP referans)
-        distanceToShotMap.put(Inches.of(132.0), new Shot(4080, 0.43)); // Orta-uzak
-        distanceToShotMap.put(Inches.of(150.0), new Shot(4260, 0.46)); // Uzak
-        distanceToShotMap.put(Inches.of(165.5), new Shot(4380, 0.48)); // WCP uzak referans
-        // Uzun menzil (tower/human tarafi yakini) - sahada tune edilecek
-        distanceToShotMap.put(Inches.of(182.0), new Shot(4536, 0.51));
-        distanceToShotMap.put(Inches.of(200.0), new Shot(4692, 0.55));
-        distanceToShotMap.put(Inches.of(220.0), new Shot(4860, 0.59));
-        distanceToShotMap.put(Inches.of(235.0), new Shot(4980, 0.62));
-        distanceToShotMap.put(Inches.of(242.0), new Shot(5040, 0.64)); // Human side'e yakin ust limit
+        distanceToShotMap.put(Inches.of(36.0), new Shot(2966, 0.12)); // 2880 → 2966
+        distanceToShotMap.put(Inches.of(52.0), new Shot(3461, 0.19)); // 3360 → 3461
+        distanceToShotMap.put(Inches.of(72.0), new Shot(3646, 0.25)); // 3540 → 3646
+        distanceToShotMap.put(Inches.of(92.0), new Shot(3832, 0.31)); // 3720 → 3832
+        distanceToShotMap.put(Inches.of(114.4), new Shot(4048, 0.40)); // 3930 → 4048
+        distanceToShotMap.put(Inches.of(132.0), new Shot(4202, 0.43)); // 4080 → 4202
+        distanceToShotMap.put(Inches.of(150.0), new Shot(4388, 0.46)); // 4260 → 4388
+        distanceToShotMap.put(Inches.of(165.5), new Shot(4511, 0.48)); // 4380 → 4511
+
+        // Uzun menzil
+        distanceToShotMap.put(Inches.of(182.0), new Shot(4672, 0.51)); // 4536 → 4672
+        distanceToShotMap.put(Inches.of(200.0), new Shot(4833, 0.55)); // 4692 → 4833
+        distanceToShotMap.put(Inches.of(220.0), new Shot(5006, 0.59)); // 4860 → 5006
+        distanceToShotMap.put(Inches.of(235.0), new Shot(5129, 0.62)); // 4980 → 5129
+        distanceToShotMap.put(Inches.of(242.0), new Shot(5191, 0.64)); // 5040 → 5191
     }
 
     // ========================================================================
