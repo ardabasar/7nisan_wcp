@@ -39,13 +39,6 @@ public class ShootCommand extends Command {
     private static final double kMinFeedDelaySeconds = 0.10;
     private static final double kSpinupFallbackSeconds = 0.4;
     private static final double kSpinupFallbackRatio = 0.85;
-
-    // Fast mode sabitleri (POV UP)
-    private static final double kFastReadyToleranceRPM = 300.0;
-    private static final int kFastReadyCyclesRequired = 1;
-    private static final double kFastMinFeedDelaySeconds = 0.02;
-    private static final double kFastSpinupFallbackSeconds = 0.15;
-    private static final double kFastSpinupFallbackRatio = 0.75;
     private static final double kDistanceFilterAlpha = 0.10;
     private static final double kHoodDeadband = 0.02;
     private static final Distance kMinShotDistance = Inches.of(36.0);
@@ -104,7 +97,6 @@ public class ShootCommand extends Command {
     private final IntakeArmSubsystem intakeArm; // null olabilir
     private final VisionSubsystem vision;
     private final String limelightName;
-    private final boolean fastMode;
     private int readyCycles = 0;
     private double spinupStartTimestamp = 0.0;
     private double lastTargetRpm = 0.0;
@@ -114,22 +106,12 @@ public class ShootCommand extends Command {
     private boolean feedingStarted = false;
 
     /**
-     * Constructor - Normal mod
+     * Constructor - IntakeArm agitasyonlu (teleop + otonom)
      */
     public ShootCommand(ShooterSubsystem shooter, HoodSubsystem hood,
             FeederSubsystem feeder, HopperSubsystem hopper,
             VisionSubsystem vision, String limelightName,
             IntakeArmSubsystem intakeArm) {
-        this(shooter, hood, feeder, hopper, vision, limelightName, intakeArm, false);
-    }
-
-    /**
-     * Constructor - Fast mod secenekli
-     */
-    public ShootCommand(ShooterSubsystem shooter, HoodSubsystem hood,
-            FeederSubsystem feeder, HopperSubsystem hopper,
-            VisionSubsystem vision, String limelightName,
-            IntakeArmSubsystem intakeArm, boolean fastMode) {
         this.shooter = shooter;
         this.hood = hood;
         this.feeder = feeder;
@@ -137,7 +119,6 @@ public class ShootCommand extends Command {
         this.vision = vision;
         this.limelightName = limelightName;
         this.intakeArm = intakeArm;
-        this.fastMode = fastMode;
 
         if (intakeArm != null) {
             addRequirements(shooter, hood, feeder, hopper, intakeArm);
@@ -147,12 +128,12 @@ public class ShootCommand extends Command {
     }
 
     /**
-     * Constructor - IntakeArm'siz
+     * Constructor - IntakeArm'siz (geriye uyumluluk)
      */
     public ShootCommand(ShooterSubsystem shooter, HoodSubsystem hood,
             FeederSubsystem feeder, HopperSubsystem hopper,
             VisionSubsystem vision, String limelightName) {
-        this(shooter, hood, feeder, hopper, vision, limelightName, null, false);
+        this(shooter, hood, feeder, hopper, vision, limelightName, null);
     }
 
     @Override
@@ -212,22 +193,16 @@ public class ShootCommand extends Command {
         }
 
         // 4) FEEDER + HOPPER
-        double toleranceRPM = fastMode ? kFastReadyToleranceRPM : kShooterReadyToleranceRPM;
-        int cyclesRequired = fastMode ? kFastReadyCyclesRequired : kShooterReadyCyclesRequired;
-        double minFeedDelay = fastMode ? kFastMinFeedDelaySeconds : kMinFeedDelaySeconds;
-        double fallbackSeconds = fastMode ? kFastSpinupFallbackSeconds : kSpinupFallbackSeconds;
-        double fallbackRatio = fastMode ? kFastSpinupFallbackRatio : kSpinupFallbackRatio;
-
-        boolean strictReady = shooter.isVelocityWithinTolerance(toleranceRPM);
+        boolean strictReady = shooter.isVelocityWithinTolerance(kShooterReadyToleranceRPM);
         readyCycles = strictReady ? readyCycles + 1 : 0;
-        boolean readyByStrict = readyCycles >= cyclesRequired;
+        boolean readyByStrict = readyCycles >= kShooterReadyCyclesRequired;
 
         double elapsed = Timer.getFPGATimestamp() - spinupStartTimestamp;
-        boolean readyByFallback = elapsed >= fallbackSeconds
-                && shooter.isVelocityAboveRatio(fallbackRatio);
+        boolean readyByFallback = elapsed >= kSpinupFallbackSeconds
+                && shooter.isVelocityAboveRatio(kSpinupFallbackRatio);
 
         boolean hoodReady = hood.isPositionWithinTolerance();
-        boolean allowFeed = elapsed >= minFeedDelay
+        boolean allowFeed = elapsed >= kMinFeedDelaySeconds
                 && (readyByStrict || readyByFallback)
                 && hoodReady;
 

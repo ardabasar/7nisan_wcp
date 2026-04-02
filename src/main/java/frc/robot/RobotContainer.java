@@ -434,11 +434,8 @@ public class RobotContainer {
                         shooter, hood, intakeRoller, hopper, feeder));
 
         // ==================================================================
-        // POV UP -> Hizli Atis (ShootCommand fast mode)
-        // Ayni atış mantigi, daha agresif bekleme = daha hizli atar
+        // POV UP -> (bos)
         // ==================================================================
-        joystick.povUp().whileTrue(
-                new ShootCommand(shooter, hood, feeder, hopper, vision, "limelight", intakeArm, true));
 
         // ==================================================================
         // POV RIGHT -> Intake yukari kaldirma (basili tut = +0.25)
