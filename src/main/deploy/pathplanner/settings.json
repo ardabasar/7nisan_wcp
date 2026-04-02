@@ -3,6 +3,7 @@
   "robotLength": 0.762,
   "holonomicMode": true,
   "pathFolders": [
+    "only_shoot",
     "human_shooter",
     "left_balls",
     "natural_zone_left",

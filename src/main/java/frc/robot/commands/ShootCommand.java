@@ -39,6 +39,13 @@ public class ShootCommand extends Command {
     private static final double kMinFeedDelaySeconds = 0.10;
     private static final double kSpinupFallbackSeconds = 0.4;
     private static final double kSpinupFallbackRatio = 0.85;
+
+    // Fast mode sabitleri (POV UP)
+    private static final double kFastReadyToleranceRPM = 300.0;
+    private static final int kFastReadyCyclesRequired = 1;
+    private static final double kFastMinFeedDelaySeconds = 0.02;
+    private static final double kFastSpinupFallbackSeconds = 0.15;
+    private static final double kFastSpinupFallbackRatio = 0.75;
     private static final double kDistanceFilterAlpha = 0.10;
     private static final double kHoodDeadband = 0.02;
     private static final Distance kMinShotDistance = Inches.of(36.0);
@@ -70,21 +77,21 @@ public class ShootCommand extends Command {
                             .interpolate(startValue.hoodPosition, endValue.hoodPosition, t)));
 
     static {
-        distanceToShotMap.put(Inches.of(36.0), new Shot(2966, 0.12)); // 2880 → 2966
-        distanceToShotMap.put(Inches.of(52.0), new Shot(3461, 0.19)); // 3360 → 3461
-        distanceToShotMap.put(Inches.of(72.0), new Shot(3646, 0.25)); // 3540 → 3646
-        distanceToShotMap.put(Inches.of(92.0), new Shot(3832, 0.31)); // 3720 → 3832
-        distanceToShotMap.put(Inches.of(114.4), new Shot(4048, 0.40)); // 3930 → 4048
-        distanceToShotMap.put(Inches.of(132.0), new Shot(4202, 0.43)); // 4080 → 4202
-        distanceToShotMap.put(Inches.of(150.0), new Shot(4388, 0.46)); // 4260 → 4388
-        distanceToShotMap.put(Inches.of(165.5), new Shot(4511, 0.48)); // 4380 → 4511
+        distanceToShotMap.put(Inches.of(36.0), new Shot(2966, 0.12)); // Hub dibinden atis
+        distanceToShotMap.put(Inches.of(52.0), new Shot(3461, 0.19)); // En yakin
+        distanceToShotMap.put(Inches.of(72.0), new Shot(3646, 0.25)); // Yakin-orta
+        distanceToShotMap.put(Inches.of(92.0), new Shot(3832, 0.31)); // Orta-yakin
+        distanceToShotMap.put(Inches.of(114.4), new Shot(4048, 0.40)); // Orta (WCP referans)
+        distanceToShotMap.put(Inches.of(132.0), new Shot(4202, 0.43)); // Orta-uzak
+        distanceToShotMap.put(Inches.of(150.0), new Shot(4388, 0.46)); // Uzak
+        distanceToShotMap.put(Inches.of(165.5), new Shot(4511, 0.48)); // WCP uzak referans
 
-        // Uzun menzil
-        distanceToShotMap.put(Inches.of(182.0), new Shot(4672, 0.51)); // 4536 → 4672
-        distanceToShotMap.put(Inches.of(200.0), new Shot(4833, 0.55)); // 4692 → 4833
-        distanceToShotMap.put(Inches.of(220.0), new Shot(5006, 0.59)); // 4860 → 5006
-        distanceToShotMap.put(Inches.of(235.0), new Shot(5129, 0.62)); // 4980 → 5129
-        distanceToShotMap.put(Inches.of(242.0), new Shot(5191, 0.64)); // 5040 → 5191
+        // Uzun menzil (tower/human tarafi yakini) - sahada tune edilecek
+        distanceToShotMap.put(Inches.of(182.0), new Shot(4672, 0.51));
+        distanceToShotMap.put(Inches.of(200.0), new Shot(4833, 0.55));
+        distanceToShotMap.put(Inches.of(220.0), new Shot(5006, 0.59));
+        distanceToShotMap.put(Inches.of(235.0), new Shot(5129, 0.62));
+        distanceToShotMap.put(Inches.of(242.0), new Shot(5191, 0.64)); // Human side'e yakin ust limit
     }
 
     // ========================================================================
@@ -97,6 +104,7 @@ public class ShootCommand extends Command {
     private final IntakeArmSubsystem intakeArm; // null olabilir
     private final VisionSubsystem vision;
     private final String limelightName;
+    private final boolean fastMode;
     private int readyCycles = 0;
     private double spinupStartTimestamp = 0.0;
     private double lastTargetRpm = 0.0;
@@ -106,12 +114,22 @@ public class ShootCommand extends Command {
     private boolean feedingStarted = false;
 
     /**
-     * Constructor - IntakeArm agitasyonlu (teleop + otonom)
+     * Constructor - Normal mod
      */
     public ShootCommand(ShooterSubsystem shooter, HoodSubsystem hood,
             FeederSubsystem feeder, HopperSubsystem hopper,
             VisionSubsystem vision, String limelightName,
             IntakeArmSubsystem intakeArm) {
+        this(shooter, hood, feeder, hopper, vision, limelightName, intakeArm, false);
+    }
+
+    /**
+     * Constructor - Fast mod secenekli
+     */
+    public ShootCommand(ShooterSubsystem shooter, HoodSubsystem hood,
+            FeederSubsystem feeder, HopperSubsystem hopper,
+            VisionSubsystem vision, String limelightName,
+            IntakeArmSubsystem intakeArm, boolean fastMode) {
         this.shooter = shooter;
         this.hood = hood;
         this.feeder = feeder;
@@ -119,6 +137,7 @@ public class ShootCommand extends Command {
         this.vision = vision;
         this.limelightName = limelightName;
         this.intakeArm = intakeArm;
+        this.fastMode = fastMode;
 
         if (intakeArm != null) {
             addRequirements(shooter, hood, feeder, hopper, intakeArm);
@@ -128,12 +147,12 @@ public class ShootCommand extends Command {
     }
 
     /**
-     * Constructor - IntakeArm'siz (geriye uyumluluk)
+     * Constructor - IntakeArm'siz
      */
     public ShootCommand(ShooterSubsystem shooter, HoodSubsystem hood,
             FeederSubsystem feeder, HopperSubsystem hopper,
             VisionSubsystem vision, String limelightName) {
-        this(shooter, hood, feeder, hopper, vision, limelightName, null);
+        this(shooter, hood, feeder, hopper, vision, limelightName, null, false);
     }
 
     @Override
@@ -193,16 +212,22 @@ public class ShootCommand extends Command {
         }
 
         // 4) FEEDER + HOPPER
-        boolean strictReady = shooter.isVelocityWithinTolerance(kShooterReadyToleranceRPM);
+        double toleranceRPM = fastMode ? kFastReadyToleranceRPM : kShooterReadyToleranceRPM;
+        int cyclesRequired = fastMode ? kFastReadyCyclesRequired : kShooterReadyCyclesRequired;
+        double minFeedDelay = fastMode ? kFastMinFeedDelaySeconds : kMinFeedDelaySeconds;
+        double fallbackSeconds = fastMode ? kFastSpinupFallbackSeconds : kSpinupFallbackSeconds;
+        double fallbackRatio = fastMode ? kFastSpinupFallbackRatio : kSpinupFallbackRatio;
+
+        boolean strictReady = shooter.isVelocityWithinTolerance(toleranceRPM);
         readyCycles = strictReady ? readyCycles + 1 : 0;
-        boolean readyByStrict = readyCycles >= kShooterReadyCyclesRequired;
+        boolean readyByStrict = readyCycles >= cyclesRequired;
 
         double elapsed = Timer.getFPGATimestamp() - spinupStartTimestamp;
-        boolean readyByFallback = elapsed >= kSpinupFallbackSeconds
-                && shooter.isVelocityAboveRatio(kSpinupFallbackRatio);
+        boolean readyByFallback = elapsed >= fallbackSeconds
+                && shooter.isVelocityAboveRatio(fallbackRatio);
 
         boolean hoodReady = hood.isPositionWithinTolerance();
-        boolean allowFeed = elapsed >= kMinFeedDelaySeconds
+        boolean allowFeed = elapsed >= minFeedDelay
                 && (readyByStrict || readyByFallback)
                 && hoodReady;
 

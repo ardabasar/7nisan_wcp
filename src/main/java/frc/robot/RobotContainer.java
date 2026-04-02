@@ -330,8 +330,8 @@ public class RobotContainer {
      * LT -> FULL INTAKE (Roller calistir)
      *
      * D-PAD (POV):
-     * Up -> Climb Yukari (Uzat)
-     * Down -> Climb Asagi (Cek/Asil)
+     * Up -> Shooter spin-up (onceden dondur, basili tut)
+     * Down -> (bos)
      * Right -> Intake yukari kaldirma
      * Left -> Feeder ve shooter geri hareket etsin
      *
@@ -434,16 +434,11 @@ public class RobotContainer {
                         shooter, hood, intakeRoller, hopper, feeder));
 
         // ==================================================================
-        // POV UP -> Climb Yukari (Uzat)
+        // POV UP -> Hizli Atis (ShootCommand fast mode)
+        // Ayni atış mantigi, daha agresif bekleme = daha hizli atar
         // ==================================================================
         joystick.povUp().whileTrue(
-                new ClimbCommand(climb, ClimbCommand.Direction.UP));
-
-        // ==================================================================
-        // POV DOWN -> Climb Asagi (Cek/Asil)
-        // ==================================================================
-        joystick.povDown().whileTrue(
-                new ClimbCommand(climb, ClimbCommand.Direction.DOWN));
+                new ShootCommand(shooter, hood, feeder, hopper, vision, "limelight", intakeArm, true));
 
         // ==================================================================
         // POV RIGHT -> Intake yukari kaldirma (basili tut = +0.25)
