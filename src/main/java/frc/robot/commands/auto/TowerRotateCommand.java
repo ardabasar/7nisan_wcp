@@ -21,7 +21,7 @@ import frc.robot.subsystems.CommandSwerveDrivetrain;
  * Ileri/geri hareket YOKTUR. txnc = 0 olunca settle suresinden sonra biter.
  *
  * KULLANIM (PathPlanner):
- *   path -> alignToTowerRot -> alignToTowerDrive -> climbUp
+ *   path -> alignToTowerRot -> alignToTowerDrive
  * ============================================================================
  */
 public class TowerRotateCommand extends Command {

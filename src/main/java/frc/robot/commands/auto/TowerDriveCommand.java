@@ -22,7 +22,7 @@ import frc.robot.subsystems.CommandSwerveDrivetrain;
  * TowerRotateCommand'dan SONRA calistirilmali (tag zaten ortalanmis olmali).
  *
  * KULLANIM (PathPlanner):
- *   path -> alignToTowerRot -> alignToTowerDrive -> climbUp
+ *   path -> alignToTowerRot -> alignToTowerDrive
  * ============================================================================
  */
 public class TowerDriveCommand extends Command {

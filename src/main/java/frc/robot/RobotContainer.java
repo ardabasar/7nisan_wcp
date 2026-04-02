@@ -29,7 +29,7 @@ import frc.robot.commands.AlignToAprilTag;
 import frc.robot.commands.AlignToHubOdometry;
 import frc.robot.commands.ShootCommand;
 import frc.robot.commands.IntakeCommand;
-import frc.robot.commands.ClimbCommand;
+
 import frc.robot.commands.auto.AutoAlignToTagCommand;
 import frc.robot.commands.auto.TowerDriveCommand;
 import frc.robot.commands.auto.TowerRotateCommand;
@@ -45,7 +45,7 @@ import frc.robot.subsystems.HopperSubsystem;
 import frc.robot.subsystems.IntakeArmSubsystem;
 import frc.robot.subsystems.IntakeRollerSubsystem;
 
-import frc.robot.subsystems.ClimbSubsystem;
+
 import frc.robot.subsystems.LEDSubsystem;
 import frc.robot.subsystems.VisionSubsystem;
 
@@ -81,7 +81,7 @@ import frc.robot.subsystems.VisionSubsystem;
  * - IntakeRollerSubsystem: 1x TalonFX roller (CAN 13)
  * - HopperSubsystem: 1x TalonFX kayis (CAN 14)
  * - FeederSubsystem: 1x TalonFX shooter beslemesi (CAN 15)
- * - ClimbSubsystem: 1x TalonFX asma (CAN 16)
+
  * - HoodSubsystem: 2x Servo pozisyon (PWM 3-4)
  *
  * CAN ID HARITASI:
@@ -96,7 +96,7 @@ import frc.robot.subsystems.VisionSubsystem;
  * Intake Roller: 13 (silindir, 0.5 hiz)
  * Hopper: 14 (kayis, -0.25 hiz)
  * Feeder: 15 (shooter beslemesi, voltaj mantigi)
- * Climb: 16 (+/-0.25 hiz)
+
  * PWM:
  * Hood servolar: 3 (sol), 4 (sag)
  * ============================================================================
@@ -142,7 +142,7 @@ public class RobotContainer {
     private final HopperSubsystem hopper = new HopperSubsystem();
     private final IntakeArmSubsystem intakeArm = new IntakeArmSubsystem();
     private final IntakeRollerSubsystem intakeRoller = new IntakeRollerSubsystem();
-    private final ClimbSubsystem climb = new ClimbSubsystem();
+
     private final LEDSubsystem leds = new LEDSubsystem();
 
     // ========================================================================
@@ -196,14 +196,11 @@ public class RobotContainer {
         NamedCommands.registerCommand("alignToTag",
                 new AlignToHubOdometry(drivetrain, vision).withTimeout(0.5));
 
-        // Climb devre disi - motor sokuldu
-        // NamedCommands.registerCommand("climbUp", ...);
-        // NamedCommands.registerCommand("climbDown", ...);
 
         // ==============================================================
         // TOWER HIZALAMA - Asilma icin (Tag 15 Red / Tag 31 Blue)
         // 2 FAZLI: Once don+ortala, sonra duz ilerle
-        // PathPlanner'da: path -> alignToTowerRot -> alignToTowerDrive -> climbUp
+        // PathPlanner'da: path -> alignToTowerRot -> alignToTowerDrive
         // ==============================================================
 
         // FAZ 1: Sadece donus - tag'i ekranin ortasina getir (ileri/geri YOK)
@@ -330,7 +327,7 @@ public class RobotContainer {
      * LT -> FULL INTAKE (Roller calistir)
      *
      * D-PAD (POV):
-     * Up -> Shooter spin-up (onceden dondur, basili tut)
+     * Up -> (bos)
      * Down -> (bos)
      * Right -> Intake yukari kaldirma
      * Left -> Feeder ve shooter geri hareket etsin
@@ -583,7 +580,4 @@ public class RobotContainer {
         return intakeRoller;
     }
 
-    public ClimbSubsystem getClimb() {
-        return climb;
-    }
 }
