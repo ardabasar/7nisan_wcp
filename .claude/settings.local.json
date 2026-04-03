@@ -19,7 +19,8 @@
       "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/commands/SubsystemCommands.java)",
       "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/commands/PrepareShotCommand.java)",
       "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/subsystems/Swerve.java)",
-      "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/Landmarks.java)"
+      "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/Landmarks.java)",
+      "WebFetch(domain:frc-events.firstinspires.org)"
     ]
   }
 }
