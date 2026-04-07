@@ -30,6 +30,8 @@ import frc.robot.commands.AlignToHubOdometry;
 import frc.robot.commands.ShootCommand;
 import frc.robot.commands.IntakeCommand;
 
+import static edu.wpi.first.units.Units.Meters;
+
 import frc.robot.commands.auto.AutoAlignToTagCommand;
 import frc.robot.commands.auto.TowerDriveCommand;
 import frc.robot.commands.auto.TowerRotateCommand;
@@ -167,6 +169,44 @@ public class RobotContainer {
         SmartDashboard.putData("Auto Mode", autoChooser);
         SmartDashboard.putBoolean("Drive/XYInverted", driveXYInverted);
         configureBindings();
+
+        // ==================================================================
+        // HOOD DEFAULT COMMAND - Kendi alaninda mesafeye gore ayarla
+        // 2026 REBUILT saha: 16.518m x 8.043m
+        //   Blue Alliance Bolgesi: x < 6.5m  (hub x=4.625)
+        //   Neutral Zone:         x = 6.5 - 10.0m
+        //   Red Alliance Bolgesi: x > 10.0m  (hub x=11.915)
+        //
+        // Kendi alaninda = hood mesafeye gore surekli ayarlanir
+        // Neutral zone / karsi alan = hood sabit default, servo kipirrrtdamaz
+        // RT basinca ShootCommand hood'u devralir (require override).
+        // ==================================================================
+        hood.setDefaultCommand(hood.run(() -> {
+            double robotX = drivetrain.getState().Pose.getX();
+            boolean inOwnZone;
+
+            var alliance = DriverStation.getAlliance();
+            if (alliance.isPresent()) {
+                if (alliance.get() == DriverStation.Alliance.Blue) {
+                    inOwnZone = robotX < 6.5; // Blue alan
+                } else {
+                    inOwnZone = robotX > 10.0; // Red alan
+                }
+            } else {
+                // Alliance bilinmiyorsa mesafe bazli fallback
+                inOwnZone = vision.getDistanceToOwnHub() < 7.0;
+            }
+
+            if (inOwnZone) {
+                double dist = vision.getDistanceToOwnHub();
+                if (dist >= 0 && dist < 7.0) {
+                    double hoodPos = ShootCommand.getHoodPositionForDistance(Meters.of(dist));
+                    hood.setPosition(hoodPos);
+                }
+            } else {
+                hood.setDefault();
+            }
+        }));
         CommandScheduler.getInstance().schedule(FollowPathCommand.warmupCommand());
     }
 
@@ -321,8 +361,8 @@ public class RobotContainer {
      * Y (ust) -> Hopper Manuel Geri (Sikisma)
      *
      * BUMPER / TRIGGER:
-     * RB -> Hub yonune donus hizalama (basili tut, Auto-Aim)
-     * RT -> ATIS! (Shooter+Feeder+Hood+Hopper)
+     * RB -> Hub yonune donus hizalama (basili tut, SADECE nisan - atissiz)
+     * RT -> SHOOT ON THE MOVE (Aim+Shoot+Drive paralel, 6237 sistemi)
      * LB -> PAS (Intake+Hopper+Feeder+Shooter hepsi birden, basili tut)
      * LT -> FULL INTAKE (Roller calistir)
      *
@@ -368,13 +408,25 @@ public class RobotContainer {
                 drivetrain.applyRequest(() -> new SwerveRequest.Idle()).ignoringDisable(true));
 
         // ==================================================================
-        // RT (Sag Trigger) -> ATIS
-        // Mesafe olc -> Shooter RPM + Hood aci ayarla
-        // Shooter + Feeder + Hopper birlikte calisir
-        // Intake arm'a DOKUNULMAZ, neredeyse orada kalir
+        // RT (Sag Trigger) -> SHOOT ON THE MOVE (6237 sistemi)
+        // Paralel calisir:
+        //   1) AlignToHubOdometry: Hub'a kilitlen + surucu X/Y ile surmeye devam
+        //   2) ShootCommand: Mesafe olc, RPM+Hood ayarla, aimed olunca feed
+        // RT basili tut = sur + nishan al + hazir olunca otomatik at
         // ==================================================================
         joystick.rightTrigger(0.5).whileTrue(
-                new ShootCommand(shooter, hood, feeder, hopper, vision, "limelight", intakeArm));
+                Commands.parallel(
+                        new AlignToHubOdometry(drivetrain, vision,
+                                () -> {
+                                    double sign = driveXYInverted ? -1.0 : 1.0;
+                                    return sign * shapeInput(-joystick.getLeftY()) * MaxSpeed;
+                                },
+                                () -> {
+                                    double sign = driveXYInverted ? -1.0 : 1.0;
+                                    return sign * shapeInput(-joystick.getLeftX()) * MaxSpeed;
+                                }),
+                        new ShootCommand(shooter, hood, feeder, hopper, vision, "limelight", intakeArm,
+                                () -> AlignToHubOdometry.isAimed(drivetrain))));
 
         // ==================================================================
         // RB -> Hub yonune donus hizalama (614 tarzi odometry bazli, basili tut)
@@ -578,6 +630,58 @@ public class RobotContainer {
 
     public IntakeRollerSubsystem getIntakeRoller() {
         return intakeRoller;
+    }
+
+    // ========================================================================
+    // NEW SHOOT TELEMETRY - Elastic Dashboard "NewShoot" tab
+    // Her 200ms'de (10 loop'ta 1) guncellenir, loop overrun olmaz.
+    // RT basili olsa da olmasa da surekli gosterir.
+    // ========================================================================
+    private int newShootLoopCount = 0;
+
+    public void updateNewShootTelemetry() {
+        newShootLoopCount++;
+        if (newShootLoopCount % 10 != 0) return;
+
+        // Zone
+        double robotX = drivetrain.getState().Pose.getX();
+        double dist = vision.getDistanceToOwnHub();
+        boolean inOwnZone;
+        var alliance = DriverStation.getAlliance();
+        if (alliance.isPresent()) {
+            inOwnZone = alliance.get() == DriverStation.Alliance.Blue
+                    ? robotX < 6.5 : robotX > 10.0;
+        } else {
+            inOwnZone = dist < 7.0;
+        }
+
+        SmartDashboard.putBoolean("NewShoot/InOwnZone", inOwnZone);
+        SmartDashboard.putNumber("NewShoot/HubDist (m)", Math.round(dist * 100.0) / 100.0);
+
+        // Hood
+        SmartDashboard.putNumber("NewShoot/Hood Target", hood.getTargetPosition());
+        SmartDashboard.putNumber("NewShoot/Hood Current", hood.getCurrentPosition());
+        SmartDashboard.putBoolean("NewShoot/Hood Ready", hood.isPositionWithinTolerance());
+
+        // Shooter
+        SmartDashboard.putBoolean("NewShoot/RPM Ready", shooter.isVelocityWithinTolerance());
+        SmartDashboard.putNumber("NewShoot/RPM Avg", Math.round(shooter.getAverageMotorRPMAbs()));
+        SmartDashboard.putNumber("NewShoot/RPM Target", shooter.getTargetRPM());
+
+        // Aim
+        boolean aimed = AlignToHubOdometry.isAimed(drivetrain);
+        SmartDashboard.putBoolean("NewShoot/Aimed", aimed);
+
+        // Combined status
+        boolean allReady = aimed && shooter.isVelocityWithinTolerance()
+                && hood.isPositionWithinTolerance();
+        SmartDashboard.putBoolean("NewShoot/ALL READY", allReady);
+        SmartDashboard.putString("NewShoot/Status",
+                !inOwnZone ? "NEUTRAL ZONE"
+                : !aimed ? "AIMING..."
+                : !shooter.isVelocityWithinTolerance() ? "SPINUP..."
+                : !hood.isPositionWithinTolerance() ? "HOOD..."
+                : "FIRE!");
     }
 
 }

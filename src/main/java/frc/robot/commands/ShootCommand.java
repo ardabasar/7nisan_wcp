@@ -12,6 +12,8 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 
+import java.util.function.BooleanSupplier;
+
 import frc.robot.LimelightHelpers;
 import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.subsystems.HoodSubsystem;
@@ -32,12 +34,19 @@ import frc.robot.subsystems.VisionSubsystem;
  * 6) Birakinca hepsi durur, hood default'a doner
  */
 public class ShootCommand extends Command {
-    // %35 artis zaten tabloya islendi, scale 1.0
-    private static final double kShooterRpmScale = 1.0;
-    private static final double kShooterReadyToleranceRPM = 150.0;
-    private static final int kShooterReadyCyclesRequired = 3;
-    private static final double kMinFeedDelaySeconds = 0.10;
-    private static final double kSpinupFallbackSeconds = 0.4;
+    // RPM CARPANI - Tek yerden tum atislarin RPM'ini degistir
+    // 1.225 = %22.5 artis (mevcut kalibrasyon)
+    // Ornek: 1.25 = %25 artis, 1.0 = ham degerler
+    private static final double kShooterRpmScale = 1.225;
+
+    // HOOD CARPANI - Tek yerden tum hood pozisyonlarini degistir
+    // 0.60 = %40 azaltma (mevcut kalibrasyon)
+    // Ornek: 0.50 = %50 azaltma, 1.0 = orijinal degerler
+    private static final double kHoodScale = 0.60;
+    private static final double kShooterReadyToleranceRPM = 250.0;
+    private static final int kShooterReadyCyclesRequired = 2;
+    private static final double kMinFeedDelaySeconds = 0.05;
+    private static final double kSpinupFallbackSeconds = 0.25;
     private static final double kSpinupFallbackRatio = 0.85;
     private static final double kDistanceFilterAlpha = 0.10;
     private static final double kHoodDeadband = 0.02;
@@ -69,22 +78,24 @@ public class ShootCommand extends Command {
                     Interpolator.forDouble()
                             .interpolate(startValue.hoodPosition, endValue.hoodPosition, t)));
 
+    // ORIJINAL BASE DEGERLER - sahada kalibrasyon sonucu
+    // RPM'ler kShooterRpmScale ile, Hood'lar kHoodScale ile carpilir
     static {
-        distanceToShotMap.put(Inches.of(36.0), new Shot(2966, 0.12)); // Hub dibinden atis
-        distanceToShotMap.put(Inches.of(52.0), new Shot(3461, 0.19)); // En yakin
-        distanceToShotMap.put(Inches.of(72.0), new Shot(3646, 0.25)); // Yakin-orta
-        distanceToShotMap.put(Inches.of(92.0), new Shot(3832, 0.31)); // Orta-yakin
-        distanceToShotMap.put(Inches.of(114.4), new Shot(4048, 0.40)); // Orta (WCP referans)
-        distanceToShotMap.put(Inches.of(132.0), new Shot(4202, 0.43)); // Orta-uzak
-        distanceToShotMap.put(Inches.of(150.0), new Shot(4388, 0.46)); // Uzak
-        distanceToShotMap.put(Inches.of(165.5), new Shot(4511, 0.48)); // WCP uzak referans
+        distanceToShotMap.put(Inches.of(36.0),  new Shot(2400, 0.12));   // Hub dibinden atis
+        distanceToShotMap.put(Inches.of(52.0),  new Shot(2800, 0.19));   // En yakin
+        distanceToShotMap.put(Inches.of(72.0),  new Shot(2950, 0.25));   // Yakin-orta
+        distanceToShotMap.put(Inches.of(92.0),  new Shot(3100, 0.31));   // Orta-yakin
+        distanceToShotMap.put(Inches.of(114.4), new Shot(3275, 0.40));   // Orta (WCP referans)
+        distanceToShotMap.put(Inches.of(132.0), new Shot(3400, 0.43));   // Orta-uzak
+        distanceToShotMap.put(Inches.of(150.0), new Shot(3550, 0.46));   // Uzak
+        distanceToShotMap.put(Inches.of(165.5), new Shot(3650, 0.48));   // WCP uzak referans
 
-        // Uzun menzil (tower/human tarafi yakini) - sahada tune edilecek
-        distanceToShotMap.put(Inches.of(182.0), new Shot(4672, 0.51));
-        distanceToShotMap.put(Inches.of(200.0), new Shot(4833, 0.55));
-        distanceToShotMap.put(Inches.of(220.0), new Shot(5006, 0.59));
-        distanceToShotMap.put(Inches.of(235.0), new Shot(5129, 0.62));
-        distanceToShotMap.put(Inches.of(242.0), new Shot(5191, 0.64)); // Human side'e yakin ust limit
+        // Uzun menzil
+        distanceToShotMap.put(Inches.of(182.0), new Shot(3780, 0.51));
+        distanceToShotMap.put(Inches.of(200.0), new Shot(3910, 0.55));
+        distanceToShotMap.put(Inches.of(220.0), new Shot(4050, 0.59));
+        distanceToShotMap.put(Inches.of(235.0), new Shot(4150, 0.62));
+        distanceToShotMap.put(Inches.of(242.0), new Shot(4200, 0.64));   // Human side ust limit
     }
 
     // ========================================================================
@@ -97,6 +108,7 @@ public class ShootCommand extends Command {
     private final IntakeArmSubsystem intakeArm; // null olabilir
     private final VisionSubsystem vision;
     private final String limelightName;
+    private final BooleanSupplier aimedSupplier;
     private int readyCycles = 0;
     private double spinupStartTimestamp = 0.0;
     private double lastTargetRpm = 0.0;
@@ -106,12 +118,13 @@ public class ShootCommand extends Command {
     private boolean feedingStarted = false;
 
     /**
-     * Constructor - IntakeArm agitasyonlu (teleop + otonom)
+     * Constructor - Shoot on the Move (aim kontrolu dahil)
+     * aimedSupplier: robot hub'a kilitli mi? Feed ancak aimed=true olunca baslar.
      */
     public ShootCommand(ShooterSubsystem shooter, HoodSubsystem hood,
             FeederSubsystem feeder, HopperSubsystem hopper,
             VisionSubsystem vision, String limelightName,
-            IntakeArmSubsystem intakeArm) {
+            IntakeArmSubsystem intakeArm, BooleanSupplier aimedSupplier) {
         this.shooter = shooter;
         this.hood = hood;
         this.feeder = feeder;
@@ -119,6 +132,7 @@ public class ShootCommand extends Command {
         this.vision = vision;
         this.limelightName = limelightName;
         this.intakeArm = intakeArm;
+        this.aimedSupplier = aimedSupplier;
 
         if (intakeArm != null) {
             addRequirements(shooter, hood, feeder, hopper, intakeArm);
@@ -128,12 +142,22 @@ public class ShootCommand extends Command {
     }
 
     /**
+     * Constructor - IntakeArm agitasyonlu (teleop + otonom, aim kontrolsuz)
+     */
+    public ShootCommand(ShooterSubsystem shooter, HoodSubsystem hood,
+            FeederSubsystem feeder, HopperSubsystem hopper,
+            VisionSubsystem vision, String limelightName,
+            IntakeArmSubsystem intakeArm) {
+        this(shooter, hood, feeder, hopper, vision, limelightName, intakeArm, () -> true);
+    }
+
+    /**
      * Constructor - IntakeArm'siz (geriye uyumluluk)
      */
     public ShootCommand(ShooterSubsystem shooter, HoodSubsystem hood,
             FeederSubsystem feeder, HopperSubsystem hopper,
             VisionSubsystem vision, String limelightName) {
-        this(shooter, hood, feeder, hopper, vision, limelightName, null);
+        this(shooter, hood, feeder, hopper, vision, limelightName, null, () -> true);
     }
 
     @Override
@@ -174,7 +198,7 @@ public class ShootCommand extends Command {
                 1.0);
         double hoodFastTrim = MathUtil.interpolate(kNearHoodFastTrim, kFarHoodFastTrim, distanceBlend);
         double targetHoodPosition = MathUtil.clamp(
-                shot.hoodPosition + hoodFastTrim,
+                (shot.hoodPosition * kHoodScale) + hoodFastTrim,
                 HoodSubsystem.MIN_POSITION,
                 HoodSubsystem.MAX_POSITION);
 
@@ -202,9 +226,11 @@ public class ShootCommand extends Command {
                 && shooter.isVelocityAboveRatio(kSpinupFallbackRatio);
 
         boolean hoodReady = hood.isPositionWithinTolerance();
+        boolean aimed = aimedSupplier.getAsBoolean();
         boolean allowFeed = elapsed >= kMinFeedDelaySeconds
                 && (readyByStrict || readyByFallback)
-                && hoodReady;
+                && hoodReady
+                && aimed;
 
         if (allowFeed) {
             feeder.feed();
@@ -250,6 +276,7 @@ public class ShootCommand extends Command {
         SmartDashboard.putBoolean("Shoot/ShooterReady Strict", readyByStrict);
         SmartDashboard.putBoolean("Shoot/ShooterReady Fallback", readyByFallback);
         SmartDashboard.putBoolean("Shoot/HoodReady", hoodReady);
+        SmartDashboard.putBoolean("Shoot/Aimed", aimed);
         SmartDashboard.putBoolean("Shoot/AllowFeed", allowFeed);
         SmartDashboard.putNumber("Shoot/SpinupElapsed", elapsed);
         SmartDashboard.putNumber("Shoot/ReadyCycles", readyCycles);
@@ -295,6 +322,18 @@ public class ShootCommand extends Command {
 
         lastDistanceSource = "Fallback(1.32m)";
         return Inches.of(52.0);
+    }
+
+    /**
+     * Mesafeye gore shot tablosundan hood pozisyonunu dondurur.
+     * HoodTrackingCommand gibi disaridan erisim icin public static.
+     */
+    public static double getHoodPositionForDistance(Distance distance) {
+        Distance clamped = Meters.of(MathUtil.clamp(
+                distance.in(Meters),
+                kMinShotDistance.in(Meters),
+                kMaxShotDistance.in(Meters)));
+        return distanceToShotMap.get(clamped).hoodPosition * kHoodScale;
     }
 
     // ========================================================================

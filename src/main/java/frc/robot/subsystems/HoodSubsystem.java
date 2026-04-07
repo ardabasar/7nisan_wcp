@@ -40,9 +40,10 @@ public class HoodSubsystem extends SubsystemBase {
 
     /**
      * Servoların maksimum hareket hızı (mm/s).
-     * WCP: 20mm/s → 1 saniyelik harekette 20/100 = 0.20 pozisyon birimi
+     * 6237 referans: 60mm/s → yazılımsal pozisyon tahmini daha gerçekçi.
+     * Eski: 20mm/s (çok yavaş tahmin, gereksiz beklemeye neden oluyordu)
      */
-    private static final double MAX_SERVO_SPEED_MM_PER_S = 20.0;
+    private static final double MAX_SERVO_SPEED_MM_PER_S = 60.0;
 
     /** Minimum servo pozisyonu (WCP: 0.01) */
     public static final double MIN_POSITION = 0.01;
