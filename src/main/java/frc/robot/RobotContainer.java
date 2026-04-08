@@ -461,14 +461,14 @@ public class RobotContainer {
 
         // ==================================================================
         // LB -> PAS: Ortadan kendi tarafa top firlatma (~4-5m)
-        // Sabit RPM 2000 + Hood 0.15 + Intake + Feeder + Hopper
+        // Sabit RPM 5000 + Hood 0.64 + Intake + Feeder + Hopper
         // Basili tut: alir almaz firlatir, surus etkilenmez
         // ==================================================================
         joystick.leftBumper().whileTrue(
                 Commands.startEnd(
                         () -> {
-                            shooter.setRPM(2000);
-                            hood.setPosition(0.15);
+                            shooter.setRPM(5000);
+                            hood.setPosition(0.64);
                             intakeRoller.run();
                             hopper.run();
                             feeder.feed();
