@@ -20,7 +20,12 @@
       "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/commands/PrepareShotCommand.java)",
       "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/subsystems/Swerve.java)",
       "Bash(curl -s https://raw.githubusercontent.com/wcpllc/2026CompetitiveConcept/main/src/main/java/frc/robot/Landmarks.java)",
-      "WebFetch(domain:frc-events.firstinspires.org)"
+      "WebFetch(domain:frc-events.firstinspires.org)",
+      "Bash(/usr/libexec/java_home)",
+      "Bash(export JAVA_HOME=$\\(/usr/libexec/java_home \\))",
+      "Read(//Library/Java/JavaVirtualMachines/**)",
+      "Read(//Users/ardabasar/wpilib/2026/jdk/**)",
+      "Read(//Users/ardabasar/wpilib/**)"
     ]
   }
 }

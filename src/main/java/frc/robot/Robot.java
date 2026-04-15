@@ -13,6 +13,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
 import frc.robot.util.Elastic;
+import frc.robot.util.ShiftIndicator;
 
 /**
  * ============================================================================
@@ -81,6 +82,7 @@ public class Robot extends TimedRobot {
         m_timeAndJoystickReplay.update();
         CommandScheduler.getInstance().run();
         m_robotContainer.updateNewShootTelemetry();
+        ShiftIndicator.update();
 
         // ================================================================
         // MAC TIMER - Elastic Dashboard
@@ -126,6 +128,9 @@ public class Robot extends TimedRobot {
         CommandScheduler.getInstance().cancelAll();
         m_autonomousCommand = null;
 
+        // Shift timer'i otonom basinda da baslat
+        ShiftIndicator.initialize();
+
         m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
         if (m_autonomousCommand != null) {
@@ -156,6 +161,9 @@ public class Robot extends TimedRobot {
         // Otonom'dan kalan her seyi temizle
         CommandScheduler.getInstance().cancelAll();
         m_autonomousCommand = null;
+
+        // Shift timer'i baslat (2026 REBUILT sira sistemi)
+        ShiftIndicator.initialize();
 
         // Teleop baslarken de vision ile konum dogrula
         // VisionSubsystem zaten acik, ama bir kez daha seed komutu calistir
