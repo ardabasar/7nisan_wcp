@@ -17,6 +17,7 @@ import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.cscore.HttpCamera;
 import edu.wpi.first.cscore.HttpCamera.HttpCameraKind;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -108,7 +109,7 @@ public class RobotContainer {
     // ========================================================================
     // SWERVE SABITLERI
     // ========================================================================
-    private final double MaxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond) * 0.50;
+    private final double MaxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
     private final double MaxAngularRate = RotationsPerSecond.of(1).in(RadiansPerSecond);
     private static final double JOYSTICK_DEADBAND = 0.15;
     private static final double INPUT_CURVE_EXPONENT = 1.5;
@@ -465,22 +466,29 @@ public class RobotContainer {
         // Basili tut: alir almaz firlatir, surus etkilenmez
         // ==================================================================
         joystick.leftBumper().whileTrue(
-                Commands.startEnd(
-                        () -> {
-                            shooter.setRPM(5000);
-                            hood.setPosition(0.64);
-                            intakeRoller.run();
-                            hopper.run();
-                            feeder.feed();
-                        },
-                        () -> {
-                            shooter.stop();
-                            hood.setDefault();
-                            intakeRoller.stop();
-                            hopper.stop();
-                            feeder.stop();
-                        },
-                        shooter, hood, intakeRoller, hopper, feeder));
+                Commands.parallel(
+                        Commands.startEnd(
+                                () -> {
+                                    shooter.setRPM(4000);
+                                    hood.setPosition(0.64);
+                                    hopper.run();
+                                    feeder.feed();
+                                },
+                                () -> {
+                                    shooter.stop();
+                                    hood.setDefault();
+                                    hopper.stop();
+                                    feeder.stop();
+                                },
+                                shooter, hood, hopper, feeder),
+                        // Intake arm agitasyonu (ShootCommand ile ayni mantik)
+                        Commands.runEnd(
+                                () -> {
+                                    double phase = (Timer.getFPGATimestamp() % 0.80);
+                                    intakeArm.setSpeed(phase < 0.40 ? 0.25 : -0.25);
+                                },
+                                () -> intakeArm.stop(),
+                                intakeArm)));
 
         // ==================================================================
         // POV UP -> (bos)
