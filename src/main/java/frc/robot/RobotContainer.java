@@ -10,7 +10,6 @@ import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.commands.FollowPathCommand;
 
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.cameraserver.CameraServer;
@@ -112,9 +111,7 @@ public class RobotContainer {
     private final double MaxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
     private final double MaxAngularRate = RotationsPerSecond.of(1).in(RadiansPerSecond);
     private static final double JOYSTICK_DEADBAND = 0.15;
-    private static final double INPUT_CURVE_EXPONENT = 1.5;
-    private static final double TRANSLATION_INPUT_RATE_LIMIT = 2.5; // joystick unit / s (daha yumusak ivme)
-    private static final double ROTATION_INPUT_RATE_LIMIT = 3.5; // joystick unit / s (donus ivmesi)
+    private static final double INPUT_CURVE_EXPONENT = 1.0; // 1.0 = lineer (curve kaldirildi)
     // ========================================================================
     // SWERVE REQUEST'LER
     // ========================================================================
@@ -124,9 +121,6 @@ public class RobotContainer {
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
     private final Telemetry logger = new Telemetry(MaxSpeed);
-    private final SlewRateLimiter xInputLimiter = new SlewRateLimiter(TRANSLATION_INPUT_RATE_LIMIT);
-    private final SlewRateLimiter yInputLimiter = new SlewRateLimiter(TRANSLATION_INPUT_RATE_LIMIT);
-    private final SlewRateLimiter rotInputLimiter = new SlewRateLimiter(ROTATION_INPUT_RATE_LIMIT);
     private boolean driveXYInverted = false;
 
     // ========================================================================
@@ -395,14 +389,10 @@ public class RobotContainer {
                     final double shapedLeft = xySign * shapeInput(rawLeft);
                     final double shapedRotation = shapeInput(rawRotation);
 
-                    final double smoothedForward = xInputLimiter.calculate(shapedForward);
-                    final double smoothedLeft = yInputLimiter.calculate(shapedLeft);
-                    final double smoothedRotation = rotInputLimiter.calculate(shapedRotation);
-
                     return drive
-                            .withVelocityX(smoothedForward * MaxSpeed)
-                            .withVelocityY(smoothedLeft * MaxSpeed)
-                            .withRotationalRate(smoothedRotation * MaxAngularRate);
+                            .withVelocityX(shapedForward * MaxSpeed)
+                            .withVelocityY(shapedLeft * MaxSpeed)
+                            .withRotationalRate(shapedRotation * MaxAngularRate);
                 }));
 
         RobotModeTriggers.disabled().whileTrue(
@@ -469,7 +459,7 @@ public class RobotContainer {
                 Commands.parallel(
                         Commands.startEnd(
                                 () -> {
-                                    shooter.setRPM(4000);
+                                    shooter.setRPM(6000);
                                     hood.setPosition(0.64);
                                     hopper.run();
                                     feeder.feed();
@@ -571,8 +561,6 @@ public class RobotContainer {
 
             // Vision'i da resetle - tag gorurse yeniden dogru konum alsin
             vision.resetVisionSeed();
-            xInputLimiter.reset(0);
-            yInputLimiter.reset(0);
             SmartDashboard.putString("Drive/Status", "GYRO + VISION RESET!");
         }));
 

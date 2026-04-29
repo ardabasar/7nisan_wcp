@@ -37,7 +37,7 @@ public class ShootCommand extends Command {
     // RPM CARPANI - Tek yerden tum atislarin RPM'ini degistir
     // 1.225 = %22.5 artis (mevcut kalibrasyon)
     // Ornek: 1.25 = %25 artis, 1.0 = ham degerler
-    private static final double kShooterRpmScale = 1.30;
+    private static final double kShooterRpmScale = 1.28;
 
     // HOOD CARPANI - Tek yerden tum hood pozisyonlarini degistir
     // 0.60 = %40 azaltma (mevcut kalibrasyon)
