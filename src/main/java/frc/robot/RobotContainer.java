@@ -459,10 +459,10 @@ public class RobotContainer {
                 Commands.parallel(
                         Commands.startEnd(
                                 () -> {
-                                    shooter.setRPM(6000);
-                                    hood.setPosition(0.64);
-                                    hopper.run();
-                                    feeder.feed();
+                                    shooter.setPercentOutput(1.0); // Tam 12V
+                                    hood.setPosition(0.50);
+                                    hopper.setSpeed(-1.0);          // Tam 12V (-1 yon)
+                                    feeder.setPercentOutput(1.0);   // Tam 12V
                                 },
                                 () -> {
                                     shooter.stop();
