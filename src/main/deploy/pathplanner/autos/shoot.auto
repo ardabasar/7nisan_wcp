@@ -33,6 +33,12 @@
           "data": {
             "name": "autoShoot"
           }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "sh2"
+          }
         }
       ]
     }
