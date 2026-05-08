@@ -469,7 +469,7 @@ public class RobotContainer {
                 Commands.parallel(
                         Commands.startEnd(
                                 () -> {
-                                    shooter.setRPM(4000);
+                                    shooter.setRPM(6000);
                                     hood.setPosition(0.64);
                                     hopper.run();
                                     feeder.feed();
