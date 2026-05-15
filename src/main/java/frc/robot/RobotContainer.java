@@ -512,10 +512,12 @@ public class RobotContainer {
                             shooter.setRPM(-1500); // Shooter geri (negatif RPM)
                             feeder.reverse(); // Feeder geri
                             intakeRoller.reverse(); // IntakeRoller geri
+                            hopper.reverse();
                         },
                         () -> {
                             shooter.stop();
                             feeder.stop();
+                            hopper.stop();
                             intakeRoller.stop();
                         },
                         shooter, feeder, intakeRoller));
